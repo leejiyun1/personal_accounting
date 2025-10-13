@@ -1,16 +1,8 @@
 package com.personalaccount.user.entity;
 
+import com.personalaccount.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-
-/**
- * 사용자 엔티티
- *
- * BaseEntity 상속:
- * - createdAt, updatedAt 자동 관리
- *
- * 테이블명: users (user는 PostgreSQL 예약어라 복수형 사용)
- */
 
 @Entity
 @Table(name = "users")
@@ -18,7 +10,8 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class User {
+public class User extends BaseEntity {  // ← BaseEntity 상속!
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -28,4 +21,36 @@ public class User {
 
     @Column(nullable = false)
     private String password;
+
+    @Column(nullable = false, length = 50)
+    private String name;
+
+    @Column(length = 20)
+    private String provider;
+
+    @Column(length = 100)
+    private String providerId;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isActive = true;
+
+
+    // === 비즈니스 메서드 ===
+
+    public void changePassword(String newPassword) {
+        this.password = newPassword;
+    }
+
+    public void changeName(String newName) {
+        this.name = newName;
+    }
+
+    public void deactivate() {
+        this.isActive = false;
+    }
+
+    public void activate() {
+        this.isActive = true;
+    }
 }
