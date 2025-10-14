@@ -2,32 +2,19 @@ package com.personalaccount.common.exception.handler;
 
 import com.personalaccount.common.dto.CommonResponse;
 import com.personalaccount.common.dto.ResponseFactory;
-import com.personalaccount.common.exception.custom.DuplicateEmailException;
-import com.personalaccount.common.exception.custom.UserNotFoundException;
+import com.personalaccount.common.exception.custom.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-/**
- * 전역 예외 처리기
- *
- * @RestControllerAdvice:
- * - 모든 Controller에서 발생하는 예외를 한 곳에서 처리
- * - @ControllerAdvice + @ResponseBody
- *
- * 역할:
- * - Controller에서 예외 발생 시 자동으로 잡아서 처리
- * - 일관된 에러 응답 반환
- */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * UserNotFoundException 처리
-     */
+    // === User 예외 ===
+
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<CommonResponse<Void>> handleUserNotFound(
             UserNotFoundException ex
@@ -39,9 +26,6 @@ public class GlobalExceptionHandler {
                 .body(ResponseFactory.error(ex.getMessage()));
     }
 
-    /**
-     * DuplicateEmailException 처리
-     */
     @ExceptionHandler(DuplicateEmailException.class)
     public ResponseEntity<CommonResponse<Void>> handleDuplicateEmail(
             DuplicateEmailException ex
@@ -53,9 +37,40 @@ public class GlobalExceptionHandler {
                 .body(ResponseFactory.error(ex.getMessage()));
     }
 
-    /**
-     * 모든 예외 처리 (catch-all)
-     */
+    // === Book 예외===
+
+    @ExceptionHandler(BookNotFoundException.class)
+    public ResponseEntity<CommonResponse<Void>> handleBookNotFound(
+            BookNotFoundException ex
+    ) {
+        log.warn("BookNotFoundException: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ResponseFactory.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(DuplicateBookTypeException.class)
+    public ResponseEntity<CommonResponse<Void>> handleDuplicateBookType(
+            DuplicateBookTypeException ex
+    ) {
+        log.warn("DuplicateBookTypeException: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ResponseFactory.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(UnauthorizedBookAccessException.class)
+    public ResponseEntity<CommonResponse<Void>> handleUnauthorizedBookAccess(
+            UnauthorizedBookAccessException ex
+    ) {
+        log.warn("UnauthorizedBookAccessException: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ResponseFactory.error(ex.getMessage()));
+    }
+
+    // === 모든 예외 ===
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<CommonResponse<Void>> handleException(
             Exception ex
