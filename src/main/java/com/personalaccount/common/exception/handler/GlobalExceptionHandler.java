@@ -69,6 +69,19 @@ public class GlobalExceptionHandler {
                 .body(ResponseFactory.error(ex.getMessage()));
     }
 
+    // === Account 예외 ===
+
+    @ExceptionHandler(AccountNotFoundException.class)
+    public ResponseEntity<CommonResponse<Void>> handleAccountNotFound(
+            AccountNotFoundException ex
+    ) {
+        log.warn("AccountNotFoundException: {}", ex.getMessage());
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ResponseFactory.error(ex.getMessage()));
+    }
+
     // === 모든 예외 ===
 
     @ExceptionHandler(Exception.class)
