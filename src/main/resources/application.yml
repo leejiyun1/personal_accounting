@@ -7,11 +7,11 @@ spring:
 
   # PostgreSQL 설정
   datasource:
-    url: jdbc:postgresql://localhost:5432/personal_accounting
-    username: jiyun
-    password: jiyun016
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/personal_accounting}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
-    hikari:  # 커넥션 풀 설정
+    hikari:
       maximum-pool-size: 10
       minimum-idle: 5
       connection-timeout: 30000
@@ -19,7 +19,7 @@ spring:
   # JPA 설정
   jpa:
     hibernate:
-      ddl-auto: create-drop  # 개발: create-drop, 나중에 update로 변경
+      ddl-auto: create-drop
     defer-datasource-initialization: true
     show-sql: true
     properties:
@@ -31,13 +31,13 @@ spring:
           batch_size: 20
         order_inserts: true
         order_updates: true
-    open-in-view: false  # OSIV 비활성화
+    open-in-view: false
 
   # Redis 설정
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
       timeout: 3000ms
 
 # 서버 설정

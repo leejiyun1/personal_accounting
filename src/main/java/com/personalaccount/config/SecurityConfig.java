@@ -9,10 +9,10 @@ import org.springframework.security.web.SecurityFilterChain;
 
 /**
  * Spring Security 설정
- * 목적:
- * - URL별 접근 권한 설정
- * - 회원가입/로그인은 누구나 접근 가능
- * - 나머지 API는 인증 필요
+ *
+ * 현재 상태: JWT 구현 전 임시 설정
+ * - 모든 요청 허용 (개발용)
+ * - JWT 필터 추가 후 인증 활성화 예정
  */
 @Configuration
 @EnableWebSecurity
@@ -26,14 +26,9 @@ public class SecurityConfig {
 
                 // URL별 권한 설정
                 .authorizeHttpRequests(auth -> auth
-                        // 인증 API - 누구나 접근 가능
-                        .requestMatchers("/api/v1/auth/**").permitAll()
-
-                        // Swagger - 누구나 접근 가능 (개발 편의)
-                        .requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
-
-                        // 나머지는 인증 필요
-                        .anyRequest().authenticated()
+                        // TODO: JWT 구현 후 인증 활성화
+                        // 현재는 개발 편의를 위해 모든 요청 허용
+                        .anyRequest().permitAll()
                 )
 
                 // 세션 사용 안 함 (JWT 사용 예정)
