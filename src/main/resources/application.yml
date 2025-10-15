@@ -20,6 +20,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop  # 개발: create-drop, 나중에 update로 변경
+    defer-datasource-initialization: true
     show-sql: true
     properties:
       hibernate:
