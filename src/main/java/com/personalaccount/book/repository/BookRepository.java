@@ -9,7 +9,7 @@ import java.util.Optional;
 
 @Repository
 public interface BookRepository extends JpaRepository<Book, Long> {
-    List<Book> findByUserIdAndActive(Long userId, Boolean isActive);
+    List<Book> findByUserIdAndIsActive(Long userId, Boolean isActive);
 
     Optional<Book> findByUserIdAndBookTypeAndIsActive(
             Long userId,

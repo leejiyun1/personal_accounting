@@ -56,7 +56,7 @@ public class BookServiceImpl implements BookService {
     public List<Book> getBooksByUserId(Long userId) {
         log.debug("장부 목록 조회: userId={}", userId);
 
-        return bookRepository.findByUserIdAndActive(userId, true);
+        return bookRepository.findByUserIdAndIsActive(userId, true);
     }
 
     @Override
