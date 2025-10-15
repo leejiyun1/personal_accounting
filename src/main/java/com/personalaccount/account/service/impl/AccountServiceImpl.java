@@ -5,6 +5,7 @@ import com.personalaccount.account.entity.AccountType;
 import com.personalaccount.account.repository.AccountRepository;
 import com.personalaccount.account.service.AccountService;
 import com.personalaccount.book.entity.BookType;
+import com.personalaccount.common.exception.custom.AccountNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,6 +55,6 @@ public class AccountServiceImpl implements AccountService {
     public Account getAccountById(Long id) {
         log.debug("계정과목 조회: id={}", id);
         return accountRepository.findById(id)
-                .orElseThrow(()-> new RuntimeException("계정과목을 찾을 수 없습니다: " + id));
+                .orElseThrow(()-> new AccountNotFoundException(id));
     }
 }
