@@ -82,6 +82,28 @@ public class GlobalExceptionHandler {
                 .body(ResponseFactory.error(ex.getMessage()));
     }
 
+    // === Transaction 예외 ===
+
+    @ExceptionHandler(TransactionNotFoundException.class)
+    public ResponseEntity<CommonResponse<Void>> handleTransactionNotFound(
+            TransactionNotFoundException ex
+    ) {
+        log.warn("TransactionNotFoundException: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ResponseFactory.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidTransactionException.class)
+    public ResponseEntity<CommonResponse<Void>> handleInvlidTransaction(
+            InvalidTransactionException ex
+    ) {
+        log.warn("InvalidTransactionException: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ResponseFactory.error(ex.getMessage()));
+    }
+
     // === 모든 예외 ===
 
     @ExceptionHandler(Exception.class)
