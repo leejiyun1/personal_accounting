@@ -56,3 +56,12 @@ logging:
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# OpenAI 설정
+openai:
+  api:
+    url: https://api.openai.com/v1/chat/completions
+    key: ${OPENAI_API_KEY}
+    model: gpt-4o-mini
+    max-tokens: 500
+    temperature: 0.7
