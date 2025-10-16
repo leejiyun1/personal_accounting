@@ -5,9 +5,14 @@ import com.personalaccount.common.dto.ResponseFactory;
 import com.personalaccount.transaction.dto.mapper.TransactionMapper;
 import com.personalaccount.transaction.dto.request.TransactionCreateRequest;
 import com.personalaccount.transaction.dto.request.TransactionUpdateRequest;
+import com.personalaccount.transaction.dto.response.TransactionDetailResponse;
 import com.personalaccount.transaction.dto.response.TransactionResponse;
+import com.personalaccount.transaction.entity.JournalEntry;
 import com.personalaccount.transaction.entity.Transaction;
+import com.personalaccount.transaction.entity.TransactionDetail;
 import com.personalaccount.transaction.entity.TransactionType;
+import com.personalaccount.transaction.repository.JournalEntryRepository;
+import com.personalaccount.transaction.repository.TransactionDetailRepository;
 import com.personalaccount.transaction.service.TransactionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +32,8 @@ import java.util.List;
 public class TransactionController {
 
     private final TransactionService transactionService;
+    private final JournalEntryRepository journalEntryRepository;
+    private final TransactionDetailRepository transactionDetailRepository;
 
     @PostMapping
     public ResponseEntity<CommonResponse<TransactionResponse>> createTransaction(
@@ -57,6 +64,11 @@ public class TransactionController {
         List<Transaction> transactions;
 
         if (startDate != null && endDate != null) {
+            if (startDate.isAfter(endDate)) {
+                return ResponseEntity
+                        .badRequest()
+                        .body(ResponseFactory.error("시작일이 종료일보다 늦을 수 없습니다."));
+            }
             transactions = transactionService.getTransactionsByDateRange(userId, bookId, startDate, endDate);
         } else if (type != null) {
             transactions = transactionService.getTransactionsByType(userId, bookId, type);
@@ -80,6 +92,31 @@ public class TransactionController {
 
         Transaction transaction = transactionService.getTransaction(userId, id);
         TransactionResponse response = TransactionMapper.toResponse(transaction);
+
+        return ResponseEntity.ok(ResponseFactory.success(response));
+    }
+
+    @GetMapping("/{id}/details")
+    public ResponseEntity<CommonResponse<TransactionDetailResponse>> getTransactionDetails(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id
+    ) {
+        log.info("거래 상세 조회(복식부기 포함) API 호출: userId={}, transactionId={}", userId, id);
+
+        // 1. Transaction 조회
+        Transaction transaction = transactionService.getTransaction(userId, id);
+
+        // 2. JournalEntry 조회
+        List<JournalEntry> journalEntries = journalEntryRepository.findByTransactionId(id);
+
+        // 3. TransactionDetail 조회
+        List<List<TransactionDetail>> detailsList = journalEntries.stream()
+                .map(je -> transactionDetailRepository.findByJournalEntryId(je.getId()))
+                .toList();
+
+        // 4. Response 생성
+        TransactionDetailResponse response = TransactionMapper.toDetailResponse(
+                transaction, journalEntries, detailsList);
 
         return ResponseEntity.ok(ResponseFactory.success(response));
     }

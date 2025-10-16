@@ -1,6 +1,7 @@
 package com.personalaccount.transaction.service.impl;
 
 import com.personalaccount.account.entity.Account;
+import com.personalaccount.account.entity.AccountType;
 import com.personalaccount.account.repository.AccountRepository;
 import com.personalaccount.book.entity.Book;
 import com.personalaccount.book.repository.BookRepository;
@@ -57,7 +58,13 @@ public class TransactionServiceImpl implements TransactionService {
         Account paymentMethod = accountRepository.findById(request.getPaymentMethodId())
                 .orElseThrow(() -> new AccountNotFoundException(request.getPaymentMethodId()));
 
-        // 3. Transaction 생성
+        // 3. 계정과목 타입 검증
+        validateAccountTypes(request.getType(), category, paymentMethod);
+
+        // 4. 장부-계정과목 BookType 일치 검증
+        validateBookTypes(book, category, paymentMethod);
+
+        // 5. Transaction 생성
         Transaction transaction = Transaction.builder()
                 .book(book)
                 .date(request.getDate())
@@ -66,7 +73,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
         Transaction savedTransaction = transactionRepository.save(transaction);
 
-        // 4. JournalEntry 생성
+        // 6. JournalEntry 생성
         String description = generateDescription(request.getType(), category.getName(), request.getAmount());
         JournalEntry journalEntry = JournalEntry.builder()
                 .transaction(savedTransaction)
@@ -75,7 +82,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
         JournalEntry savedJournalEntry = journalEntryRepository.save(journalEntry);
 
-        // 5. 복식부기 처리 (차변/대변)
+        // 7. 복식부기 처리 (차변/대변)
         createDoubleEntryDetails(savedJournalEntry, request.getType(), category, paymentMethod, request.getAmount());
 
         log.info("거래 생성 완료: transactionId={}", savedTransaction.getId());
@@ -101,6 +108,77 @@ public class TransactionServiceImpl implements TransactionService {
             // 지출: 차변(지출카테고리), 대변(결제수단)
             createDetail(journalEntry, category, DetailType.DEBIT, amount);
             createDetail(journalEntry, paymentMethod, DetailType.CREDIT, amount);
+        }
+
+        // 복식부기 검증
+        validateDoubleEntry(journalEntry);
+    }
+
+    /**
+     * 복식부기 검증 (차변 = 대변)
+     */
+    private void validateDoubleEntry(JournalEntry journalEntry) {
+        List<TransactionDetail> details = transactionDetailRepository
+                .findByJournalEntryId(journalEntry.getId());
+
+        BigDecimal debitSum = details.stream()
+                .map(TransactionDetail::getDebitAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal creditSum = details.stream()
+                .map(TransactionDetail::getCreditAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (debitSum.compareTo(creditSum) != 0) {
+            throw new InvalidTransactionException(
+                    String.format("차변과 대변 합계가 일치하지 않습니다. 차변: %s, 대변: %s",
+                            debitSum, creditSum)
+            );
+        }
+    }
+
+    /**
+     * 계정과목 타입 검증
+     */
+    private void validateAccountTypes(
+            TransactionType transactionType,
+            Account category,
+            Account paymentMethod
+    ) {
+        // 카테고리 검증
+        if (transactionType == TransactionType.INCOME) {
+            if (category.getAccountType() != AccountType.REVENUE) {
+                throw new InvalidTransactionException(
+                        "수입 거래는 수익 계정과목을 사용해야 합니다.");
+            }
+        } else {
+            if (category.getAccountType() != AccountType.EXPENSE) {
+                throw new InvalidTransactionException(
+                        "지출 거래는 비용 계정과목을 사용해야 합니다.");
+            }
+        }
+
+        // 결제수단 검증
+        if (paymentMethod.getAccountType() != AccountType.PAYMENT_METHOD) {
+            throw new InvalidTransactionException(
+                    "결제수단으로 올바른 계정과목을 선택해야 합니다.");
+        }
+    }
+
+    /**
+     * 장부-계정과목 BookType 일치 검증
+     */
+    private void validateBookTypes(Book book, Account category, Account paymentMethod) {
+        if (!category.getBookType().equals(book.getBookType())) {
+            throw new InvalidTransactionException(
+                    String.format("장부 타입(%s)과 카테고리 타입(%s)이 일치하지 않습니다.",
+                            book.getBookType(), category.getBookType()));
+        }
+
+        if (!paymentMethod.getBookType().equals(book.getBookType())) {
+            throw new InvalidTransactionException(
+                    String.format("장부 타입(%s)과 결제수단 타입(%s)이 일치하지 않습니다.",
+                            book.getBookType(), paymentMethod.getBookType()));
         }
     }
 
@@ -137,19 +215,15 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public List<Transaction> getTransactions(Long userId, Long bookId) {
         log.debug("거래 목록 조회: userId={}, bookId={}", userId, bookId);
-
         validateBookAccess(userId, bookId);
-
-        return transactionRepository.findByBookIdAndIsActiveOrderByDateDesc(bookId, true);
+        return transactionRepository.findByBookIdAndIsActiveWithBook(bookId, true);
     }
 
     @Override
     public List<Transaction> getTransactionsByType(Long userId, Long bookId, TransactionType type) {
         log.debug("거래 목록 조회(타입별): userId={}, bookId={}, type={}", userId, bookId, type);
-
         validateBookAccess(userId, bookId);
-
-        return transactionRepository.findByBookIdAndTypeAndIsActiveOrderByDateDesc(bookId, type, true);
+        return transactionRepository.findByBookIdAndTypeAndIsActiveWithBook(bookId, type, true);
     }
 
     @Override
@@ -161,10 +235,8 @@ public class TransactionServiceImpl implements TransactionService {
     ) {
         log.debug("거래 목록 조회(기간별): userId={}, bookId={}, start={}, end={}",
                 userId, bookId, startDate, endDate);
-
         validateBookAccess(userId, bookId);
-
-        return transactionRepository.findByBookIdAndDateBetweenAndIsActiveOrderByDateDesc(
+        return transactionRepository.findByBookIdAndDateBetweenAndIsActiveWithBook(
                 bookId, startDate, endDate, true);
     }
 
