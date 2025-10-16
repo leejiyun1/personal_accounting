@@ -1,6 +1,7 @@
 package com.personalaccount.transaction.repository;
 
 import com.personalaccount.transaction.entity.Transaction;
+import com.personalaccount.transaction.entity.TransactionType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -18,7 +19,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     List<Transaction> findByBookIdAndTypeAndIsActiveOrderByDateDesc(
             Long bookId,
-            Transaction type,
+            TransactionType type,
             Boolean isActive
     );
 
