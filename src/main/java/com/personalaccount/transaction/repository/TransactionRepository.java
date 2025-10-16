@@ -14,7 +14,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     List<Transaction> findByBookIdAndIsActiveOrderByDateDesc(
             Long bookId,
-            Boolean usActive
+            Boolean isActive
     );
 
     List<Transaction> findByBookIdAndTypeAndIsActiveOrderByDateDesc(
