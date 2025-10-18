@@ -19,4 +19,6 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     Optional<Account> findByCode(String code);
 
     List<Account> findByBookTypeAndIsActive(BookType bookType, Boolean isActive);
+
+    Optional<Account> findByNameAndIsActive(String name, Boolean isActive);
 }
