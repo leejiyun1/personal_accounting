@@ -1,5 +1,8 @@
 package com.personalaccount.ai.service.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.personalaccount.account.repository.AccountRepository;
 import com.personalaccount.ai.client.AiClient;
 import com.personalaccount.ai.dto.request.AiChatRequest;
 import com.personalaccount.ai.dto.request.OpenAiRequest;
@@ -10,12 +13,14 @@ import com.personalaccount.ai.session.ConversationSession;
 import com.personalaccount.ai.session.SessionManager;
 import com.personalaccount.book.entity.Book;
 import com.personalaccount.book.repository.BookRepository;
+import com.personalaccount.common.exception.custom.AccountNotFoundException;
 import com.personalaccount.common.exception.custom.BookNotFoundException;
 import com.personalaccount.common.exception.custom.UnauthorizedBookAccessException;
 import com.personalaccount.transaction.dto.mapper.TransactionMapper;
 import com.personalaccount.transaction.dto.request.TransactionCreateRequest;
 import com.personalaccount.transaction.dto.response.TransactionResponse;
 import com.personalaccount.transaction.entity.Transaction;
+import com.personalaccount.transaction.entity.TransactionType;
 import com.personalaccount.transaction.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +28,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,6 +43,7 @@ public class AiChatServiceImpl implements AiChatService {
     private final SessionManager sessionManager;
     private final BookRepository bookRepository;
     private final TransactionService transactionService;
+    private final AccountRepository accountRepository;
 
     @Value("${openai.api.model}")
     private String model;
@@ -179,7 +187,7 @@ public class AiChatServiceImpl implements AiChatService {
 
         // TODO: JSON 파싱하여 TransactionCreateRequest 생성
         // 지금은 임시로 null 반환
-        TransactionCreateRequest transactionRequest = parseTransactionFromAi(aiMessage);
+        TransactionCreateRequest transactionRequest = parseTransactionFromAi(aiMessage, session);
 
         // 거래 생성
         Transaction transaction = transactionService.createTransaction(userId, transactionRequest);
@@ -219,11 +227,64 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     /**
-     * AI 응답을 TransactionCreateRequest로 변환 (TODO)
+     * AI 응답을 TransactionCreateRequest로 변환
      */
-    private TransactionCreateRequest parseTransactionFromAi(String aiMessage) {
-        // TODO: JSON 파싱 구현 필요
-        throw new UnsupportedOperationException("아직 구현되지 않았습니다.");
+    private TransactionCreateRequest parseTransactionFromAi(
+            String aiMessage,
+            ConversationSession session
+    ) {
+        try {
+            // "COMPLETE: " 제거
+            String jsonString = aiMessage.replace("COMPLETE:", "").trim();
+
+            // JSON 파싱 (Jackson 사용)
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode jsonNode = objectMapper.readTree(jsonString);
+
+            // 필수 필드 검증
+            if (!jsonNode.has("type") || !jsonNode.has("amount") ||
+                    !jsonNode.has("category") || !jsonNode.has("paymentMethod")) {
+                throw new RuntimeException("AI 응답에 필수 필드가 누락되었습니다: " + jsonString);
+            }
+
+            // 필드 추출
+            String type = jsonNode.get("type").asText();
+            BigDecimal amount = new BigDecimal(jsonNode.get("amount").asText());
+            String categoryName = jsonNode.get("category").asText();
+            String paymentMethodName = jsonNode.get("paymentMethod").asText();
+            String dateString = jsonNode.has("date") ?
+                    jsonNode.get("date").asText() : LocalDate.now().toString();
+
+            // 날짜 변환
+            LocalDate date = LocalDate.parse(dateString);
+
+            // 카테고리 ID 조회 (이름 → ID)
+            Long categoryId = findAccountIdByName(categoryName);
+            Long paymentMethodId = findAccountIdByName(paymentMethodName);
+
+            return TransactionCreateRequest.builder()
+                    .bookId(session.getBookId())
+                    .date(date)
+                    .type(TransactionType.valueOf(type))
+                    .amount(amount)
+                    .categoryId(categoryId)
+                    .paymentMethodId(paymentMethodId)
+                    .memo("AI 자동 생성")
+                    .build();
+
+        } catch (Exception e) {
+            log.error("AI 응답 파싱 실패: {}", aiMessage, e);
+            throw new RuntimeException("거래 정보를 파싱할 수 없습니다.", e);
+        }
+    }
+
+    /**
+     * 계정과목 이름으로 ID 찾기
+     */
+    private Long findAccountIdByName(String name) {
+        return accountRepository.findByNameAndIsActive(name, true)
+                .orElseThrow(() -> new AccountNotFoundException(name))
+                .getId();
     }
 
     /**
