@@ -2,6 +2,8 @@ package com.personalaccount.book.repository;
 import com.personalaccount.book.entity.Book;
 import com.personalaccount.book.entity.BookType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -20,4 +22,10 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     long countByUserIdAndIsActive(Long userId, Boolean isActive);
 
     Optional<Book> findByIdAndIsActive(Long id, Boolean isActive);
+
+    @Query("SELECT b FROM Book b FECTH b .user WHERE b.id = :id AND b .isActive = :isActive")
+    Optional<Book> findByIdAndIsActiveWithUser(
+            @Param("id") Long id,
+            @Param("isActive") Boolean isActive
+    );
 }

@@ -64,7 +64,7 @@ public class BookServiceImpl implements BookService {
         log.debug("장부 조회: bookId={}, userId={}", id, userId);
 
         // 1. 장부 조회
-        Book book = bookRepository.findByIdAndIsActive(id, true)
+        Book book = bookRepository.findByIdAndIsActiveWithUser(id, true)
                 .orElseThrow(() -> new BookNotFoundException(id));
 
         // 2. 권한 확인 (본인 장부인지)
