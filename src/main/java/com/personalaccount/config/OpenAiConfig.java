@@ -8,17 +8,17 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class OpenAiConfig {
 
-    @Value("${openai.api.url")
+    @Value("${openai.api.url}")
     private String apiUrl;
 
-    @Value("${openai.api.url}")
+    @Value("${openai.api.key}")
     private String apiKey;
 
     @Bean
-    public WebClient openAiWebCilent() {
+    public WebClient openAiWebClient() {
         return WebClient.builder()
                 .baseUrl(apiUrl)
-                .defaultHeader("Authorization", "Bearer" + apiKey)
+                .defaultHeader("Authorization", "Bearer " + apiKey)
                 .defaultHeader("Content-Type", "application/json")
                 .build();
     }
