@@ -12,6 +12,7 @@ import com.personalaccount.ai.service.AiChatService;
 import com.personalaccount.ai.session.ConversationSession;
 import com.personalaccount.ai.session.SessionManager;
 import com.personalaccount.book.entity.Book;
+import com.personalaccount.book.entity.BookType;
 import com.personalaccount.book.repository.BookRepository;
 import com.personalaccount.common.exception.custom.AccountNotFoundException;
 import com.personalaccount.common.exception.custom.BookNotFoundException;
@@ -258,9 +259,19 @@ public class AiChatServiceImpl implements AiChatService {
             // 날짜 변환
             LocalDate date = LocalDate.parse(dateString);
 
-            // 카테고리 ID 조회 (이름 → ID)
-            Long categoryId = findAccountIdByName(categoryName);
-            Long paymentMethodId = findAccountIdByName(paymentMethodName);
+            // ===== 여기부터 수정 =====
+
+            // 장부 조회 (BookType 필요)
+            Book book = bookRepository.findByIdAndIsActive(session.getBookId(), true)
+                    .orElseThrow(() -> new BookNotFoundException(session.getBookId()));
+
+            BookType bookType = book.getBookType();
+
+            // 카테고리 ID 조회 (이름 → ID, BookType 포함)
+            Long categoryId = findAccountIdByName(categoryName, bookType);
+            Long paymentMethodId = findAccountIdByName(paymentMethodName, bookType);
+
+            // ===== 여기까지 수정 =====
 
             return TransactionCreateRequest.builder()
                     .bookId(session.getBookId())
@@ -281,9 +292,11 @@ public class AiChatServiceImpl implements AiChatService {
     /**
      * 계정과목 이름으로 ID 찾기
      */
-    private Long findAccountIdByName(String name) {
-        return accountRepository.findByNameAndIsActive(name, true)
-                .orElseThrow(() -> new AccountNotFoundException(name))
+    private Long findAccountIdByName(String name, BookType bookType) {
+        return accountRepository.findByNameAndBookTypeAndIsActive(name, bookType, true)
+                .orElseThrow(() -> new AccountNotFoundException(
+                        String.format("계정과목을 찾을 수 없습니다. Name: %s, BookType: %s", name, bookType)
+                ))
                 .getId();
     }
 
