@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/personal_accounting
+    username: jiyun
+    password: jiyun016
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    defer-datasource-initialization: true
+    show-sql: false
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+# OpenAI (테스트에서는 사용 안 함)
+openai:
+  api:
+    url: https://api.openai.com/v1/chat/completions
+    key: test-key
+    model: gpt-4o-mini
+    max-tokens: 500
+    temperature: 0.7
