@@ -6,6 +6,8 @@ import com.personalaccount.common.exception.custom.BookNotFoundException;
 import com.personalaccount.common.exception.custom.UnauthorizedBookAccessException;
 import com.personalaccount.statistics.dto.CategoryStatistics;
 import com.personalaccount.statistics.dto.MonthlySummary;
+import com.personalaccount.statistics.dto.response.AccountBalanceResponse;
+import com.personalaccount.statistics.dto.AccountBalance;
 import com.personalaccount.statistics.dto.response.CategoryStatisticsResponse;
 import com.personalaccount.statistics.dto.response.MonthlySummaryResponse;
 import com.personalaccount.statistics.repository.StatisticsRepository;
@@ -111,6 +113,25 @@ public class StatisticsServiceImpl implements StatisticsService {
                 .totalAmount(totalAmount)
                 .categories(items)
                 .build();
+    }
+    @Override
+    public List<AccountBalanceResponse> getAccountBalances(Long userId, Long bookId) {
+        log.info("계정별 잔액 조회: userId={}, bookId={}", userId, bookId);
+
+        // 1. 장부 권한 확인
+        validateBookAccess(userId, bookId);
+
+        // 2. Repository 호출
+        List<AccountBalance> balances = statisticsRepository.getAccountBalances(bookId);
+
+        // 3. DTO 변환
+        return balances.stream()
+                .map(balance -> AccountBalanceResponse.builder()
+                        .accountId(balance.getAccountId())
+                        .accountName(balance.getAccountName())
+                        .balance(balance.getBalance().longValue())
+                        .build())
+                .toList();
     }
 
     /**

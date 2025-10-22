@@ -2,6 +2,7 @@ package com.personalaccount.statistics.controller;
 
 import com.personalaccount.common.dto.CommonResponse;
 import com.personalaccount.common.dto.ResponseFactory;
+import com.personalaccount.statistics.dto.response.AccountBalanceResponse;
 import com.personalaccount.statistics.dto.response.CategoryStatisticsResponse;
 import com.personalaccount.statistics.dto.response.MonthlySummaryResponse;
 import com.personalaccount.statistics.service.StatisticsService;
@@ -49,6 +50,20 @@ public class StatisticsController {
         CategoryStatisticsResponse response = statisticsService.getCategoryStatistics(
                 userId, bookId, yearMonth, type
         );
+
+        return ResponseEntity.ok(
+                ResponseFactory.success(response)
+        );
+    }
+
+    @GetMapping("/accounts")
+    public ResponseEntity<CommonResponse<List<AccountBalanceResponse>>> getAccountBalances(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam Long bookId
+    ) {
+        log.info("계정별 잔액 API 호출: userId={}, bookId={}", userId, bookId);
+
+        List<AccountBalanceResponse> response = statisticsService.getAccountBalances(userId, bookId);
 
         return ResponseEntity.ok(
                 ResponseFactory.success(response)

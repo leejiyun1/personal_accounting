@@ -2,6 +2,7 @@ package com.personalaccount.statistics.repository;
 
 import com.personalaccount.account.entity.AccountType;
 import com.personalaccount.account.entity.QAccount;
+import com.personalaccount.statistics.dto.AccountBalance;
 import com.personalaccount.statistics.dto.CategoryStatistics;
 import com.personalaccount.statistics.dto.MonthlySummary;
 import com.personalaccount.transaction.entity.*;
@@ -136,6 +137,35 @@ public class StatisticsRepository {
                 )
                 .groupBy(account.id, account.code, account.name)
                 .orderBy(detail.debitAmount.add(detail.creditAmount).sum().desc())
+                .fetch();
+    }
+    /**
+     * 계정별 잔액 조회
+     */
+    public List<AccountBalance> getAccountBalances(Long bookId) {
+        QTransaction transaction = QTransaction.transaction;
+        QJournalEntry journalEntry = QJournalEntry.journalEntry;
+        QTransactionDetail detail = QTransactionDetail.transactionDetail;
+        QAccount account = QAccount.account;
+
+        return queryFactory
+                .select(Projections.constructor(
+                        AccountBalance.class,
+                        account.id,
+                        account.name,
+                        detail.debitAmount.subtract(detail.creditAmount).sum()
+                ))
+                .from(transaction)
+                .join(journalEntry).on(journalEntry.transaction.eq(transaction))
+                .join(detail).on(detail.journalEntry.eq(journalEntry))
+                .join(account).on(detail.account.eq(account))
+                .where(
+                        transaction.book.id.eq(bookId),
+                        transaction.isActive.isTrue(),
+                        account.accountType.in(AccountType.ASSET, AccountType.LIABILITY)
+                )
+                .groupBy(account.id, account.name)
+                .orderBy(account.id.asc())
                 .fetch();
     }
 }
