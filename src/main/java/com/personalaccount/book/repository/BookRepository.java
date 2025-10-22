@@ -23,9 +23,6 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     Optional<Book> findByIdAndIsActive(Long id, Boolean isActive);
 
-    @Query("SELECT b FROM Book b FECTH b .user WHERE b.id = :id AND b .isActive = :isActive")
-    Optional<Book> findByIdAndIsActiveWithUser(
-            @Param("id") Long id,
-            @Param("isActive") Boolean isActive
-    );
+    @Query("SELECT b FROM Book b JOIN FETCH b.user WHERE b.id = :id AND b.isActive = :isActive")
+    Optional<Book> findByIdAndIsActiveWithUser(@Param("id") Long id, @Param("isActive") Boolean isActive);
 }

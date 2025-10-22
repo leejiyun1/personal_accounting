@@ -65,3 +65,8 @@ openai:
     model: gpt-4o-mini
     max-tokens: 500
     temperature: 0.7
+# JWT 설정
+jwt:
+  secret: ${JWT_SECRET:your-secret-key-minimum-32-characters-long-for-hs256}
+  access-token-validity: 1800000  # 30분 (밀리초)
+  refresh-token-validity: 1800000  # 30분 (밀리초)

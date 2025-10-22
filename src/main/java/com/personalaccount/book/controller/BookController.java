@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.List;
 
@@ -27,7 +28,7 @@ public class BookController {
 
     @PostMapping
     public ResponseEntity<CommonResponse<BookResponse>> createBook(
-            @RequestHeader("X-User-Id") Long userId,  // TODO: JWT로 변경
+            @AuthenticationPrincipal Long userId,
             @Valid @RequestBody BookCreateRequest request
     ) {
         log.info("장부 생성 API 호출: userId={}, bookType={}", userId, request.getBookType());
@@ -46,7 +47,7 @@ public class BookController {
 
     @GetMapping
     public ResponseEntity<CommonResponse<List<BookResponse>>> getBooks(
-            @RequestHeader("X-User-Id") Long userId  // TODO: JWT로 변경
+            @AuthenticationPrincipal Long userId
     ) {
         log.info("장부 목록 조회 API 호출: userId={}", userId);
 
@@ -67,7 +68,7 @@ public class BookController {
     @GetMapping("/{id}")
     public ResponseEntity<CommonResponse<BookResponse>> getBook(
             @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId  // TODO: JWT로 변경
+            @AuthenticationPrincipal Long userId
     ) {
         log.info("장부 조회 API 호출: bookId={}, userId={}", id, userId);
 
@@ -86,7 +87,7 @@ public class BookController {
     @PutMapping("/{id}")
     public ResponseEntity<CommonResponse<BookResponse>> updateBook(
             @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId,  // TODO: JWT로 변경
+            @AuthenticationPrincipal Long userId,
             @Valid @RequestBody BookUpdateRequest request
     ) {
         log.info("장부 수정 API 호출: bookId={}, userId={}", id, userId);
@@ -107,7 +108,7 @@ public class BookController {
     @DeleteMapping("/{id}")
     public ResponseEntity<CommonResponse<Void>> deleteBook(
             @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId  // TODO: JWT로 변경
+            @AuthenticationPrincipal Long userId
     ) {
         log.info("장부 삭제 API 호출: bookId={}, userId={}", id, userId);
 
