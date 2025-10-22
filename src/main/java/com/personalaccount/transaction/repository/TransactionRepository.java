@@ -68,4 +68,19 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     );
 
     Optional<Transaction> findByIdAndIsActive(Long id, Boolean isActive);
+
+    @Query("SELECT DISTINCT t FROM Transaction t " +
+            "JOIN FETCH t.book b " +
+            "JOIN FETCH b.user " +
+            "JOIN JournalEntry je ON je.transaction = t " +
+            "JOIN TransactionDetail td ON td.journalEntry = je " +
+            "WHERE t.book.id = :bookId " +
+            "AND td.account.id = :accountId " +
+            "AND t.isActive = :isActive " +
+            "ORDER BY t.date DESC")
+    List<Transaction> findByBookIdAndAccountIdAndIsActive(
+            @Param("bookId") Long bookId,
+            @Param("accountId") Long accountId,
+            @Param("isActive") Boolean isActive
+    );
 }

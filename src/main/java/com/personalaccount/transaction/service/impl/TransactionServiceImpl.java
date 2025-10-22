@@ -241,6 +241,13 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    public List<Transaction> getTransactionsByAccount(Long userId, Long bookId, Long accountId) {
+        log.debug("거래 목록 조회(계정별): userId={}, bookId={}, accountId={}", userId, bookId, accountId);
+        validateBookAccess(userId, bookId);
+        return transactionRepository.findByBookIdAndAccountIdAndIsActive(bookId, accountId, true);
+    }
+
+    @Override
     public Transaction getTransaction(Long userId, Long id) {
         log.debug("거래 상세 조회: userId={}, transactionId={}", userId, id);
 

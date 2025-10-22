@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -52,18 +53,21 @@ public class TransactionController {
 
     @GetMapping
     public ResponseEntity<CommonResponse<List<TransactionResponse>>> getTransactions(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @RequestParam Long bookId,
+            @RequestParam(required = false) Long accountId,  // 추가
             @RequestParam(required = false) TransactionType type,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
-        log.info("거래 목록 조회 API 호출: userId={}, bookId={}, type={}, start={}, end={}",
-                userId, bookId, type, startDate, endDate);
+        log.info("거래 목록 조회 API 호출: userId={}, bookId={}, accountId={}, type={}, start={}, end={}",
+                userId, bookId, accountId, type, startDate, endDate);
 
         List<Transaction> transactions;
 
-        if (startDate != null && endDate != null) {
+        if (accountId != null) {
+            transactions = transactionService.getTransactionsByAccount(userId, bookId, accountId);
+        } else if (startDate != null && endDate != null) {
             if (startDate.isAfter(endDate)) {
                 return ResponseEntity
                         .badRequest()

@@ -23,6 +23,8 @@ public interface TransactionService {
             LocalDate endDate
     );
 
+    List<Transaction> getTransactionsByAccount(Long userId, Long bookId, Long accountId);
+
     Transaction getTransaction(Long userId, Long id);
 
     Transaction updateTransaction(Long userId, Long id, TransactionUpdateRequest request);
