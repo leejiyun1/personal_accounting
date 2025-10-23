@@ -8,6 +8,7 @@ import com.personalaccount.book.repository.BookRepository;
 import com.personalaccount.common.exception.custom.*;
 import com.personalaccount.transaction.dto.request.TransactionCreateRequest;
 import com.personalaccount.transaction.dto.request.TransactionUpdateRequest;
+import com.personalaccount.transaction.dto.response.TransactionWithAmountResponse;
 import com.personalaccount.transaction.entity.*;
 import com.personalaccount.transaction.repository.JournalEntryRepository;
 import com.personalaccount.transaction.repository.TransactionDetailRepository;
@@ -296,5 +297,17 @@ public class TransactionServiceImpl implements TransactionService {
         if (!book.getUser().getId().equals(userId)) {
             throw new UnauthorizedBookAccessException(bookId);
         }
+    }
+
+    @Override
+    public List<TransactionWithAmountResponse> getTransactionsByAccountWithAmount(
+            Long userId,
+            Long bookId,
+            Long accountId
+    ) {
+        log.debug("거래 목록 조회(계정별, 금액포함): userId={}, bookId={}, accountId={}",
+                userId, bookId, accountId);
+        validateBookAccess(userId, bookId);
+        return transactionRepository.findTransactionsByAccountWithAmount(bookId, accountId, true);
     }
 }

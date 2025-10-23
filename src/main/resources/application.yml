@@ -1,6 +1,6 @@
 spring:
   application:
-    name: personal-accounting
+    name: personal_accounting
 
   profiles:
     active: dev

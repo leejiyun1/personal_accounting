@@ -2,6 +2,7 @@ package com.personalaccount.transaction.service;
 
 import com.personalaccount.transaction.dto.request.TransactionCreateRequest;
 import com.personalaccount.transaction.dto.request.TransactionUpdateRequest;
+import com.personalaccount.transaction.dto.response.TransactionWithAmountResponse;
 import com.personalaccount.transaction.entity.Transaction;
 import com.personalaccount.transaction.entity.TransactionType;
 
@@ -30,4 +31,10 @@ public interface TransactionService {
     Transaction updateTransaction(Long userId, Long id, TransactionUpdateRequest request);
 
     void deleteTransaction(Long userId, Long id);
+
+    List<TransactionWithAmountResponse> getTransactionsByAccountWithAmount(
+            Long userId,
+            Long bookId,
+            Long accountId
+    );
 }

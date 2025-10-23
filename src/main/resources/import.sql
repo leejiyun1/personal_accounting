@@ -1,0 +1,52 @@
+-- 개인 장부 (1000번대)
+INSERT INTO accounts (code, name, account_type, book_type, is_active, created_at, updated_at)
+VALUES
+    ('1100', '현금', 'PAYMENT_METHOD', 'PERSONAL', true, NOW(), NOW()),
+    ('1200', '은행', 'PAYMENT_METHOD', 'PERSONAL', true, NOW(), NOW()),
+    ('1300', '체크카드', 'PAYMENT_METHOD', 'PERSONAL', true, NOW(), NOW()),
+    ('1400', '신용카드', 'PAYMENT_METHOD', 'PERSONAL', true, NOW(), NOW()),
+    ('4100', '급여', 'REVENUE', 'PERSONAL', true, NOW(), NOW()),
+    ('4200', '용돈', 'REVENUE', 'PERSONAL', true, NOW(), NOW()),
+    ('4300', '부업수입', 'REVENUE', 'PERSONAL', true, NOW(), NOW()),
+    ('4400', '이자수입', 'REVENUE', 'PERSONAL', true, NOW(), NOW()),
+    ('4500', '배당수입', 'REVENUE', 'PERSONAL', true, NOW(), NOW()),
+    ('4900', '기타수입', 'REVENUE', 'PERSONAL', true, NOW(), NOW()),
+    ('5100', '식비', 'EXPENSE', 'PERSONAL', true, NOW(), NOW()),
+    ('5200', '교통비', 'EXPENSE', 'PERSONAL', true, NOW(), NOW()),
+    ('5300', '문화생활', 'EXPENSE', 'PERSONAL', true, NOW(), NOW()),
+    ('5400', '쇼핑', 'EXPENSE', 'PERSONAL', true, NOW(), NOW()),
+    ('5500', '의료비', 'EXPENSE', 'PERSONAL', true, NOW(), NOW()),
+    ('5600', '교육비', 'EXPENSE', 'PERSONAL', true, NOW(), NOW()),
+    ('5700', '통신비', 'EXPENSE', 'PERSONAL', true, NOW(), NOW()),
+    ('5800', '월세/관리비', 'EXPENSE', 'PERSONAL', true, NOW(), NOW()),
+    ('5850', '공과금', 'EXPENSE', 'PERSONAL', true, NOW(), NOW()),
+    ('5900', '보험료', 'EXPENSE', 'PERSONAL', true, NOW(), NOW()),
+    ('5950', '경조사비', 'EXPENSE', 'PERSONAL', true, NOW(), NOW()),
+    ('5999', '기타지출', 'EXPENSE', 'PERSONAL', true, NOW(), NOW());
+
+-- 사업 장부 (2000번대)
+INSERT INTO accounts (code, name, account_type, book_type, is_active, created_at, updated_at)
+VALUES
+    ('2100', '현금', 'PAYMENT_METHOD', 'BUSINESS', true, NOW(), NOW()),
+    ('2200', '사업자계좌', 'PAYMENT_METHOD', 'BUSINESS', true, NOW(), NOW()),
+    ('2300', '법인카드', 'PAYMENT_METHOD', 'BUSINESS', true, NOW(), NOW()),
+    ('6100', '매출', 'REVENUE', 'BUSINESS', true, NOW(), NOW()),
+    ('6200', '용역수입', 'REVENUE', 'BUSINESS', true, NOW(), NOW()),
+    ('6300', '수수료수입', 'REVENUE', 'BUSINESS', true, NOW(), NOW()),
+    ('6400', '이자수입', 'REVENUE', 'BUSINESS', true, NOW(), NOW()),
+    ('6900', '기타수익', 'REVENUE', 'BUSINESS', true, NOW(), NOW()),
+    ('7100', '외주비', 'EXPENSE', 'BUSINESS', true, NOW(), NOW()),
+    ('7150', '인건비', 'EXPENSE', 'BUSINESS', true, NOW(), NOW()),
+    ('7200', '재료비', 'EXPENSE', 'BUSINESS', true, NOW(), NOW()),
+    ('7250', '수도광열비', 'EXPENSE', 'BUSINESS', true, NOW(), NOW()),
+    ('7300', '임차료', 'EXPENSE', 'BUSINESS', true, NOW(), NOW()),
+    ('7350', '보험료', 'EXPENSE', 'BUSINESS', true, NOW(), NOW()),
+    ('7400', '광고선전비', 'EXPENSE', 'BUSINESS', true, NOW(), NOW()),
+    ('7500', '접대비', 'EXPENSE', 'BUSINESS', true, NOW(), NOW()),
+    ('7600', '통신비', 'EXPENSE', 'BUSINESS', true, NOW(), NOW()),
+    ('7650', '세금과공과', 'EXPENSE', 'BUSINESS', true, NOW(), NOW()),
+    ('7700', '소모품비', 'EXPENSE', 'BUSINESS', true, NOW(), NOW()),
+    ('7750', '차량유지비', 'EXPENSE', 'BUSINESS', true, NOW(), NOW()),
+    ('7800', '운반비', 'EXPENSE', 'BUSINESS', true, NOW(), NOW()),
+    ('7850', '수선비', 'EXPENSE', 'BUSINESS', true, NOW(), NOW()),
+    ('7900', '기타비용', 'EXPENSE', 'BUSINESS', true, NOW(), NOW());

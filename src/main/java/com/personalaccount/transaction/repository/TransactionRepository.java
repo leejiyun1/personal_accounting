@@ -1,5 +1,6 @@
 package com.personalaccount.transaction.repository;
 
+import com.personalaccount.transaction.dto.response.TransactionWithAmountResponse;
 import com.personalaccount.transaction.entity.Transaction;
 import com.personalaccount.transaction.entity.TransactionType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -79,6 +80,23 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             "AND t.isActive = :isActive " +
             "ORDER BY t.date DESC")
     List<Transaction> findByBookIdAndAccountIdAndIsActive(
+            @Param("bookId") Long bookId,
+            @Param("accountId") Long accountId,
+            @Param("isActive") Boolean isActive
+    );
+
+    @Query("SELECT new com.personalaccount.transaction.dto.response.TransactionWithAmountResponse(" +
+            "t.id, t.date, t.type, t.memo, " +
+            "SUM(td.debitAmount), SUM(td.creditAmount)) " +
+            "FROM Transaction t " +
+            "JOIN JournalEntry je ON je.transaction = t " +
+            "JOIN TransactionDetail td ON td.journalEntry = je " +
+            "WHERE t.book.id = :bookId " +
+            "AND td.account.id = :accountId " +
+            "AND t.isActive = :isActive " +
+            "GROUP BY t.id, t.date, t.type, t.memo " +
+            "ORDER BY t.date DESC")
+    List<TransactionWithAmountResponse> findTransactionsByAccountWithAmount(
             @Param("bookId") Long bookId,
             @Param("accountId") Long accountId,
             @Param("isActive") Boolean isActive

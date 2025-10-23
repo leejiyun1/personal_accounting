@@ -7,6 +7,7 @@ import com.personalaccount.transaction.dto.request.TransactionCreateRequest;
 import com.personalaccount.transaction.dto.request.TransactionUpdateRequest;
 import com.personalaccount.transaction.dto.response.TransactionDetailResponse;
 import com.personalaccount.transaction.dto.response.TransactionResponse;
+import com.personalaccount.transaction.dto.response.TransactionWithAmountResponse;
 import com.personalaccount.transaction.entity.JournalEntry;
 import com.personalaccount.transaction.entity.Transaction;
 import com.personalaccount.transaction.entity.TransactionDetail;
@@ -52,10 +53,10 @@ public class TransactionController {
     }
 
     @GetMapping
-    public ResponseEntity<CommonResponse<List<TransactionResponse>>> getTransactions(
+    public ResponseEntity<CommonResponse<List<?>>> getTransactions(
             @AuthenticationPrincipal Long userId,
             @RequestParam Long bookId,
-            @RequestParam(required = false) Long accountId,  // 추가
+            @RequestParam(required = false) Long accountId,
             @RequestParam(required = false) TransactionType type,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
@@ -63,16 +64,20 @@ public class TransactionController {
         log.info("거래 목록 조회 API 호출: userId={}, bookId={}, accountId={}, type={}, start={}, end={}",
                 userId, bookId, accountId, type, startDate, endDate);
 
+        if (accountId != null) {
+            List<TransactionWithAmountResponse> response =
+                    transactionService.getTransactionsByAccountWithAmount(userId, bookId, accountId);
+            return ResponseEntity.ok(ResponseFactory.success(response));
+        }
         List<Transaction> transactions;
 
-        if (accountId != null) {
-            transactions = transactionService.getTransactionsByAccount(userId, bookId, accountId);
-        } else if (startDate != null && endDate != null) {
+        if (startDate != null && endDate != null) {
             if (startDate.isAfter(endDate)) {
                 return ResponseEntity
                         .badRequest()
                         .body(ResponseFactory.error("시작일이 종료일보다 늦을 수 없습니다."));
             }
+
             transactions = transactionService.getTransactionsByDateRange(userId, bookId, startDate, endDate);
         } else if (type != null) {
             transactions = transactionService.getTransactionsByType(userId, bookId, type);

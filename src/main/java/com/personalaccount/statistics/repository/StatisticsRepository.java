@@ -162,7 +162,7 @@ public class StatisticsRepository {
                 .where(
                         transaction.book.id.eq(bookId),
                         transaction.isActive.isTrue(),
-                        account.accountType.in(AccountType.ASSET, AccountType.LIABILITY)
+                        account.accountType.in(AccountType.ASSET, AccountType.LIABILITY, AccountType.PAYMENT_METHOD)
                 )
                 .groupBy(account.id, account.name)
                 .orderBy(account.id.asc())
