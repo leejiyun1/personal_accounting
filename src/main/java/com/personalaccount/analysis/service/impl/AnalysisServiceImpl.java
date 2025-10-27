@@ -15,7 +15,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.personalaccount.ai.client.AiClient;
+import com.personalaccount.ai.dto.request.GeminiRequest;
+import com.personalaccount.ai.dto.response.GeminiResponse;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.util.ArrayList;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -30,7 +36,7 @@ public class AnalysisServiceImpl implements AnalysisService {
 
     private final BookRepository bookRepository;
     private final TransactionRepository transactionRepository;
-    // private final AiClient aiClient; // TODO: AI 분석 추가
+    private final AiClient aiClient;
 
     @Override
     public AnalysisResponse getAnalysis(Long userId, Long bookId, String yearMonth) {
@@ -47,7 +53,7 @@ public class AnalysisServiceImpl implements AnalysisService {
         AnalysisSummary summary = calculateSummary(bookId, startDate, endDate);
         List<CategoryExpense> categoryExpenses = calculateCategoryExpenses(bookId, startDate, endDate);
 
-        // 4. AI 분석 (TODO: 실제 AI 호출로 교체)
+        // 4. AI 분석
         AiAnalysisComment aiAnalysis = generateAiAnalysis(summary, categoryExpenses);
 
         return AnalysisResponse.builder()
@@ -128,21 +134,121 @@ public class AnalysisServiceImpl implements AnalysisService {
     }
 
     /**
-     * AI 분석 생성 (임시 더미)
-     * TODO: 실제 Gemini API 호출로 교체
+     * AI 분석 생성
      */
     private AiAnalysisComment generateAiAnalysis(
             AnalysisSummary summary,
             List<CategoryExpense> categoryExpenses
     ) {
-        return AiAnalysisComment.builder()
-                .overview("이번 달 순이익은 " + summary.getNetProfit() + "원입니다.")
-                .strengths(List.of("수익률이 양호합니다"))
-                .warnings(List.of("지출이 많습니다"))
-                .suggestions(List.of("지출을 줄여보세요"))
+        // 1. 프롬프트 생성
+        String prompt = buildAnalysisPrompt(summary, categoryExpenses);
+
+        // 2. Gemini 호출
+        GeminiRequest request = GeminiRequest.builder()
+                .contents(List.of(
+                        GeminiRequest.Content.builder()
+                                .parts(List.of(
+                                        GeminiRequest.Part.builder()
+                                                .text(prompt)
+                                                .build()
+                                ))
+                                .build()
+                ))
                 .build();
+
+        GeminiResponse response = aiClient.sendMessage(request);
+        String aiResponse = response.getCandidates().get(0)
+                .getContent()
+                .getParts().get(0)
+                .getText();
+
+        // 3. AI 응답 파싱
+        return parseAiResponse(aiResponse);
     }
 
+    /**
+     * AI 프롬프트 생성
+     */
+    private String buildAnalysisPrompt(
+            AnalysisSummary summary,
+            List<CategoryExpense> categoryExpenses
+    ) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("다음 재무 데이터를 분석하여 JSON 형식으로 응답해주세요.\n\n");
+        prompt.append("### 재무 요약\n");
+        prompt.append("- 총 수입: ").append(summary.getTotalIncome()).append("원\n");
+        prompt.append("- 총 지출: ").append(summary.getTotalExpense()).append("원\n");
+        prompt.append("- 순이익: ").append(summary.getNetProfit()).append("원\n");
+        prompt.append("- 수익률: ").append(summary.getProfitRate()).append("%\n\n");
+
+        prompt.append("### 카테고리별 지출 TOP 5\n");
+        for (CategoryExpense expense : categoryExpenses) {
+            prompt.append("- ").append(expense.getCategoryName())
+                    .append(": ").append(expense.getAmount())
+                    .append("원 (").append(expense.getPercentage()).append("%)\n");
+        }
+
+        prompt.append("\n### 응답 형식 (반드시 이 형식으로만 응답)\n");
+        prompt.append("{\n");
+        prompt.append("  \"overview\": \"전체 재무 상태 한 줄 요약\",\n");
+        prompt.append("  \"strengths\": [\"잘한 점1\", \"잘한 점2\"],\n");
+        prompt.append("  \"warnings\": [\"경고1\", \"경고2\"],\n");
+        prompt.append("  \"suggestions\": [\"제안1\", \"제안2\"]\n");
+        prompt.append("}\n");
+
+        return prompt.toString();
+    }
+
+    /**
+     * AI 응답 파싱
+     */
+    private AiAnalysisComment parseAiResponse(String aiResponse) {
+        try {
+            // JSON 추출 (```json ... ``` 제거)
+            String jsonString = aiResponse;
+            if (aiResponse.contains("```json")) {
+                jsonString = aiResponse.substring(
+                        aiResponse.indexOf("```json") + 7,
+                        aiResponse.lastIndexOf("```")
+                ).trim();
+            } else if (aiResponse.contains("```")) {
+                jsonString = aiResponse.substring(
+                        aiResponse.indexOf("```") + 3,
+                        aiResponse.lastIndexOf("```")
+                ).trim();
+            }
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode jsonNode = objectMapper.readTree(jsonString);
+
+            return AiAnalysisComment.builder()
+                    .overview(jsonNode.get("overview").asText())
+                    .strengths(parseStringList(jsonNode.get("strengths")))
+                    .warnings(parseStringList(jsonNode.get("warnings")))
+                    .suggestions(parseStringList(jsonNode.get("suggestions")))
+                    .build();
+
+        } catch (Exception e) {
+            log.error("AI 응답 파싱 실패: {}", aiResponse, e);
+            // 파싱 실패 시 기본 응답
+            return AiAnalysisComment.builder()
+                    .overview("재무 분석을 생성할 수 없습니다.")
+                    .strengths(List.of())
+                    .warnings(List.of())
+                    .suggestions(List.of())
+                    .build();
+        }
+    }
+
+    private List<String> parseStringList(JsonNode node) {
+        List<String> result = new ArrayList<>();
+        if (node != null && node.isArray()) {
+            for (JsonNode item : node) {
+                result.add(item.asText());
+            }
+        }
+        return result;
+    }
     /**
      * 장부 접근 권한 확인
      */
