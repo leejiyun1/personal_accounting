@@ -9,7 +9,6 @@ import com.personalaccount.book.entity.Book;
 import com.personalaccount.book.repository.BookRepository;
 import com.personalaccount.common.exception.custom.BookNotFoundException;
 import com.personalaccount.common.exception.custom.UnauthorizedBookAccessException;
-import com.personalaccount.transaction.entity.Transaction;
 import com.personalaccount.transaction.entity.TransactionType;
 import com.personalaccount.transaction.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +20,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -41,16 +39,13 @@ public class AnalysisServiceImpl implements AnalysisService {
         // 1. 장부 권한 확인
         validateBookAccess(userId, bookId);
 
-        // 2. 해당 월의 거래 조회
+        // 2. 날짜 계산
         LocalDate startDate = LocalDate.parse(yearMonth + "-01");
         LocalDate endDate = startDate.plusMonths(1).minusDays(1);
 
-        List<Transaction> transactions = transactionRepository
-                .findByBookIdAndDateBetween(bookId, startDate, endDate);
-
         // 3. 통계 계산
-        AnalysisSummary summary = calculateSummary(transactions);
-        List<CategoryExpense> categoryExpenses = calculateCategoryExpenses(transactions);
+        AnalysisSummary summary = calculateSummary(bookId, startDate, endDate);
+        List<CategoryExpense> categoryExpenses = calculateCategoryExpenses(bookId, startDate, endDate);
 
         // 4. AI 분석 (TODO: 실제 AI 호출로 교체)
         AiAnalysisComment aiAnalysis = generateAiAnalysis(summary, categoryExpenses);
@@ -65,16 +60,20 @@ public class AnalysisServiceImpl implements AnalysisService {
     /**
      * 통계 요약 계산
      */
-    private AnalysisSummary calculateSummary(List<Transaction> transactions) {
-        BigDecimal totalIncome = transactions.stream()
-                .filter(t -> t.getType() == TransactionType.INCOME)
-                .map(Transaction::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    private AnalysisSummary calculateSummary(
+            Long bookId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        BigDecimal totalIncome = transactionRepository
+                .findTotalAmountByType(bookId, startDate, endDate, TransactionType.INCOME);
 
-        BigDecimal totalExpense = transactions.stream()
-                .filter(t -> t.getType() == TransactionType.EXPENSE)
-                .map(Transaction::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalExpense = transactionRepository
+                .findTotalAmountByType(bookId, startDate, endDate, TransactionType.EXPENSE);
+
+        // null 체크
+        totalIncome = totalIncome != null ? totalIncome : BigDecimal.ZERO;
+        totalExpense = totalExpense != null ? totalExpense : BigDecimal.ZERO;
 
         BigDecimal netProfit = totalIncome.subtract(totalExpense);
 
@@ -94,33 +93,36 @@ public class AnalysisServiceImpl implements AnalysisService {
     /**
      * 카테고리별 지출 계산
      */
-    private List<CategoryExpense> calculateCategoryExpenses(List<Transaction> transactions) {
-        BigDecimal totalExpense = transactions.stream()
-                .filter(t -> t.getType() == TransactionType.EXPENSE)
-                .map(Transaction::getAmount)
+    private List<CategoryExpense> calculateCategoryExpenses(
+            Long bookId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        List<Object[]> results = transactionRepository
+                .findCategoryExpensesByBookIdAndDateRange(bookId, startDate, endDate);
+
+        // 총 지출 계산
+        BigDecimal totalExpense = results.stream()
+                .map(row -> (BigDecimal) row[1])
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        Map<String, BigDecimal> categoryMap = transactions.stream()
-                .filter(t -> t.getType() == TransactionType.EXPENSE)
-                .collect(Collectors.groupingBy(
-                        t -> t.getCategory().getName(),
-                        Collectors.reducing(BigDecimal.ZERO, Transaction::getAmount, BigDecimal::add)
-                ));
+        // CategoryExpense로 변환
+        return results.stream()
+                .map(row -> {
+                    String categoryName = (String) row[0];
+                    BigDecimal amount = (BigDecimal) row[1];
 
-        return categoryMap.entrySet().stream()
-                .map(entry -> {
                     Double percentage = totalExpense.compareTo(BigDecimal.ZERO) > 0
-                            ? entry.getValue().divide(totalExpense, 4, RoundingMode.HALF_UP)
+                            ? amount.divide(totalExpense, 4, RoundingMode.HALF_UP)
                             .multiply(BigDecimal.valueOf(100)).doubleValue()
                             : 0.0;
 
                     return CategoryExpense.builder()
-                            .categoryName(entry.getKey())
-                            .amount(entry.getValue())
+                            .categoryName(categoryName)
+                            .amount(amount)
                             .percentage(percentage)
                             .build();
                 })
-                .sorted((a, b) -> b.getAmount().compareTo(a.getAmount())) // 금액 내림차순
                 .limit(5)  // TOP 5
                 .collect(Collectors.toList());
     }

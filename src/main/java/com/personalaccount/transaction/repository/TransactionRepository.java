@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -100,5 +101,39 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("bookId") Long bookId,
             @Param("accountId") Long accountId,
             @Param("isActive") Boolean isActive
+    );
+
+    @Query("SELECT a.name, SUM(td.debitAmount) " +
+            "FROM Transaction t " +
+            "JOIN JournalEntry je ON je.transaction = t " +
+            "JOIN TransactionDetail td ON td.journalEntry = je " +
+            "JOIN Account a ON td.account = a " +
+            "WHERE t.book.id = :bookId " +
+            "AND t.date BETWEEN :startDate AND :endDate " +
+            "AND t.type = 'EXPENSE' " +
+            "AND t.isActive = true " +
+            "AND a.type = 'EXPENSE' " +
+            "GROUP BY a.name " +
+            "ORDER BY SUM(td.debitAmount) DESC")
+    List<Object[]> findCategoryExpensesByBookIdAndDateRange(
+            @Param("bookId") Long bookId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    // 타입별 총액 조회
+    @Query("SELECT SUM(td.debitAmount - td.creditAmount) " +
+            "FROM Transaction t " +
+            "JOIN JournalEntry je ON je.transaction = t " +
+            "JOIN TransactionDetail td ON td.journalEntry = je " +
+            "WHERE t.book.id = :bookId " +
+            "AND t.date BETWEEN :startDate AND :endDate " +
+            "AND t.type = :type " +
+            "AND t.isActive = true")
+    BigDecimal findTotalAmountByType(
+            @Param("bookId") Long bookId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("type") TransactionType type
     );
 }
