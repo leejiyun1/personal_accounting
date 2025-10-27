@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.personalaccount.account.repository.AccountRepository;
 import com.personalaccount.ai.client.AiClient;
 import com.personalaccount.ai.dto.request.AiChatRequest;
-import com.personalaccount.ai.dto.request.OpenAiRequest;
+import com.personalaccount.ai.dto.request.GeminiRequest;
 import com.personalaccount.ai.dto.response.AiChatResponse;
-import com.personalaccount.ai.dto.response.OpenAiResponse;
+import com.personalaccount.ai.dto.response.GeminiResponse;
 import com.personalaccount.ai.service.AiChatService;
 import com.personalaccount.ai.session.ConversationSession;
 import com.personalaccount.ai.session.SessionManager;
@@ -25,7 +25,6 @@ import com.personalaccount.transaction.entity.TransactionType;
 import com.personalaccount.transaction.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +32,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -46,15 +46,6 @@ public class AiChatServiceImpl implements AiChatService {
     private final TransactionService transactionService;
     private final AccountRepository accountRepository;
 
-    @Value("${openai.api.model}")
-    private String model;
-
-    @Value("${openai.api.max-tokens}")
-    private Integer maxTokens;
-
-    @Value("${openai.api.temperature}")
-    private Double temperature;
-
     @Override
     public AiChatResponse chat(Long userId, AiChatRequest request) {
         log.info("AI 대화 요청: userId={}, bookId={}", userId, request.getBookId());
@@ -62,7 +53,7 @@ public class AiChatServiceImpl implements AiChatService {
         // 1. 장부 권한 확인
         validateBookAccess(userId, request.getBookId());
 
-        // 2. 세션 처리 (새 대화 vs 기존 대화)
+        // 2. 세션 처리
         ConversationSession session = getOrCreateSession(
                 request.getConversationId(),
                 userId,
@@ -72,12 +63,12 @@ public class AiChatServiceImpl implements AiChatService {
         // 3. 사용자 메시지 저장
         session.addMessage("user", request.getMessage());
 
-        // 4. OpenAI 호출
-        OpenAiRequest openAiRequest = buildOpenAiRequest(session);
-        OpenAiResponse openAiResponse = aiClient.sendMessage(openAiRequest);
+        // 4. Gemini 호출
+        GeminiRequest geminiRequest = buildGeminiRequest(session);
+        GeminiResponse geminiResponse = aiClient.sendMessage(geminiRequest);
 
         // 5. AI 응답 추출
-        String aiMessage = extractMessage(openAiResponse);
+        String aiMessage = extractMessage(geminiResponse);
         session.addMessage("assistant", aiMessage);
 
         // 6. 거래 생성 가능 여부 판단
@@ -88,19 +79,14 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
-    /**
-     * 세션 조회 또는 생성
-     */
     private ConversationSession getOrCreateSession(
             String conversationId,
             Long userId,
             Long bookId
     ) {
-        if (conversationId == null) {
-            // 새 대화 시작
+        if (conversationId == null || conversationId.isEmpty()) {
             return sessionManager.createSession(userId, bookId);
         } else {
-            // 기존 대화 이어가기
             ConversationSession session = sessionManager.getSession(conversationId);
             if (session == null) {
                 throw new RuntimeException("세션을 찾을 수 없습니다. 다시 시작해주세요.");
@@ -110,74 +96,60 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     /**
-     * OpenAI API 요청 생성
+     * Gemini API 요청 생성
      */
-    private OpenAiRequest buildOpenAiRequest(ConversationSession session) {
-        List<OpenAiRequest.Message> messages = new ArrayList<>();
+    private GeminiRequest buildGeminiRequest(ConversationSession session) {
+        // 대화 내역을 하나의 텍스트로 합치기
+        StringBuilder conversationText = new StringBuilder();
 
         // System 프롬프트
-        messages.add(OpenAiRequest.Message.builder()
-                .role("system")
-                .content(getSystemPrompt())
-                .build());
+        conversationText.append("당신은 복식부기 가계부 도우미입니다.\n");
+        conversationText.append("사용자의 수입/지출을 자연어로 입력받아 거래 정보를 추출합니다.\n\n");
+        conversationText.append("필수 정보:\n");
+        conversationText.append("1. 거래 타입 (수입/지출)\n");
+        conversationText.append("2. 금액\n");
+        conversationText.append("3. 카테고리 (예: 급여, 식비, 교통비)\n");
+        conversationText.append("4. 결제수단 (예: 현금, 은행, 카드)\n");
+        conversationText.append("5. 날짜 (생략 시 오늘)\n\n");
+        conversationText.append("정보가 부족하면 간단히 질문하세요.\n");
+        conversationText.append("정보가 충분하면 \"COMPLETE:\" 로 시작하여 JSON 형식으로 응답하세요.\n\n");
+        conversationText.append("예시:\n");
+        conversationText.append("- 부족: \"어떤 수입인가요?\"\n");
+        conversationText.append("- 충분: \"COMPLETE: {\\\"type\\\":\\\"INCOME\\\",\\\"amount\\\":50000,\\\"category\\\":\\\"용돈\\\",\\\"paymentMethod\\\":\\\"현금\\\",\\\"date\\\":\\\"2025-10-18\\\"}\"\n\n");
+        conversationText.append("---대화 시작---\n\n");
 
-        // 대화 내역
-        for (ConversationSession.ChatMessage chatMessage : session.getMessages()) {
-            messages.add(OpenAiRequest.Message.builder()
-                    .role(chatMessage.getRole())
-                    .content(chatMessage.getContent())
-                    .build());
+        // 대화 내역 추가
+        for (ConversationSession.ChatMessage message : session.getMessages()) {
+            conversationText.append(message.getRole()).append(": ").append(message.getContent()).append("\n");
         }
 
-        return OpenAiRequest.builder()
-                .model(model)
-                .messages(messages)
-                .maxTokens(maxTokens)
-                .temperature(temperature)
+        return GeminiRequest.builder()
+                .contents(List.of(
+                        GeminiRequest.Content.builder()
+                                .parts(List.of(
+                                        GeminiRequest.Part.builder()
+                                                .text(conversationText.toString())
+                                                .build()
+                                ))
+                                .build()
+                ))
                 .build();
     }
 
     /**
-     * System 프롬프트 (AI 역할 정의)
+     * Gemini 응답에서 메시지 추출
      */
-    private String getSystemPrompt() {
-        return """
-                당신은 복식부기 가계부 도우미입니다.
-                사용자의 수입/지출을 자연어로 입력받아 거래 정보를 추출합니다.
-                
-                필수 정보:
-                1. 거래 타입 (수입/지출)
-                2. 금액
-                3. 카테고리 (예: 급여, 식비, 교통비)
-                4. 결제수단 (예: 현금, 은행, 카드)
-                5. 날짜 (생략 시 오늘)
-                
-                정보가 부족하면 간단히 질문하세요.
-                정보가 충분하면 "COMPLETE:" 로 시작하여 JSON 형식으로 응답하세요.
-                
-                예시:
-                - 부족: "어떤 수입인가요?"
-                - 충분: "COMPLETE: {"type":"INCOME","amount":50000,"category":"용돈","paymentMethod":"현금","date":"2025-10-18"}"
-                """;
+    private String extractMessage(GeminiResponse response) {
+        return response.getCandidates().get(0)
+                .getContent()
+                .getParts().get(0)
+                .getText();
     }
 
-    /**
-     * OpenAI 응답에서 메시지 추출
-     */
-    private String extractMessage(OpenAiResponse response) {
-        return response.getChoices().get(0).getMessage().getContent();
-    }
-
-    /**
-     * 거래 생성 가능 여부 판단
-     */
     private boolean isTransactionComplete(String message) {
         return message.startsWith("COMPLETE:");
     }
 
-    /**
-     * 거래 완료 처리
-     */
     @Transactional
     private AiChatResponse handleCompleteTransaction(
             Long userId,
@@ -186,15 +158,11 @@ public class AiChatServiceImpl implements AiChatService {
     ) {
         log.info("거래 생성: conversationId={}", session.getConversationId());
 
-        // TODO: JSON 파싱하여 TransactionCreateRequest 생성
-        // 지금은 임시로 null 반환
         TransactionCreateRequest transactionRequest = parseTransactionFromAi(aiMessage, session);
 
-        // 거래 생성
         Transaction transaction = transactionService.createTransaction(userId, transactionRequest);
         TransactionResponse transactionResponse = TransactionMapper.toResponse(transaction);
 
-        // 세션 삭제
         sessionManager.deleteSession(session.getConversationId());
 
         return AiChatResponse.builder()
@@ -206,49 +174,38 @@ public class AiChatServiceImpl implements AiChatService {
                 .build();
     }
 
-    /**
-     * 추가 정보 필요 응답
-     */
     private AiChatResponse handleMoreInfoNeeded(
             ConversationSession session,
             String aiMessage
     ) {
         log.debug("추가 정보 필요: conversationId={}", session.getConversationId());
 
-        // 세션 저장
         sessionManager.saveSession(session);
 
         return AiChatResponse.builder()
                 .conversationId(session.getConversationId())
                 .needsMoreInfo(true)
                 .message(aiMessage)
-                .suggestions(null)  // TODO: 선택지 생성
+                .suggestions(null)
                 .transaction(null)
                 .build();
     }
 
-    /**
-     * AI 응답을 TransactionCreateRequest로 변환
-     */
     private TransactionCreateRequest parseTransactionFromAi(
             String aiMessage,
             ConversationSession session
     ) {
         try {
-            // "COMPLETE: " 제거
             String jsonString = aiMessage.replace("COMPLETE:", "").trim();
 
-            // JSON 파싱 (Jackson 사용)
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode jsonNode = objectMapper.readTree(jsonString);
 
-            // 필수 필드 검증
             if (!jsonNode.has("type") || !jsonNode.has("amount") ||
                     !jsonNode.has("category") || !jsonNode.has("paymentMethod")) {
                 throw new RuntimeException("AI 응답에 필수 필드가 누락되었습니다: " + jsonString);
             }
 
-            // 필드 추출
             String type = jsonNode.get("type").asText();
             BigDecimal amount = new BigDecimal(jsonNode.get("amount").asText());
             String categoryName = jsonNode.get("category").asText();
@@ -256,22 +213,15 @@ public class AiChatServiceImpl implements AiChatService {
             String dateString = jsonNode.has("date") ?
                     jsonNode.get("date").asText() : LocalDate.now().toString();
 
-            // 날짜 변환
             LocalDate date = LocalDate.parse(dateString);
 
-            // ===== 여기부터 수정 =====
-
-            // 장부 조회 (BookType 필요)
             Book book = bookRepository.findByIdAndIsActive(session.getBookId(), true)
                     .orElseThrow(() -> new BookNotFoundException(session.getBookId()));
 
             BookType bookType = book.getBookType();
 
-            // 카테고리 ID 조회 (이름 → ID, BookType 포함)
             Long categoryId = findAccountIdByName(categoryName, bookType);
             Long paymentMethodId = findAccountIdByName(paymentMethodName, bookType);
-
-            // ===== 여기까지 수정 =====
 
             return TransactionCreateRequest.builder()
                     .bookId(session.getBookId())
@@ -289,9 +239,6 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
-    /**
-     * 계정과목 이름으로 ID 찾기
-     */
     private Long findAccountIdByName(String name, BookType bookType) {
         return accountRepository.findByNameAndBookTypeAndIsActive(name, bookType, true)
                 .orElseThrow(() -> new AccountNotFoundException(
@@ -300,9 +247,6 @@ public class AiChatServiceImpl implements AiChatService {
                 .getId();
     }
 
-    /**
-     * 장부 접근 권한 확인
-     */
     private void validateBookAccess(Long userId, Long bookId) {
         Book book = bookRepository.findByIdAndIsActive(bookId, true)
                 .orElseThrow(() -> new BookNotFoundException(bookId));
