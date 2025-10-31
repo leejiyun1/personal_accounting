@@ -22,7 +22,7 @@ public interface LedgerRepository extends JpaRepository<Transaction, Long> {
             "WHERE t.book.id = :bookId " +
             "AND t.date <= :asOfDate " +
             "AND t.isActive = true " +
-            "AND a.type = 'ASSET'")
+            "AND a.accountType = 'ASSET'")
     BigDecimal findTotalAssets(
             @Param("bookId") Long bookId,
             @Param("asOfDate") LocalDate asOfDate
@@ -37,7 +37,7 @@ public interface LedgerRepository extends JpaRepository<Transaction, Long> {
             "WHERE t.book.id = :bookId " +
             "AND t.date <= :asOfDate " +
             "AND t.isActive = true " +
-            "AND a.type = 'LIABILITY'")
+            "AND a.accountType = 'LIABILITY'")
     BigDecimal findTotalLiabilities(
             @Param("bookId") Long bookId,
             @Param("asOfDate") LocalDate asOfDate

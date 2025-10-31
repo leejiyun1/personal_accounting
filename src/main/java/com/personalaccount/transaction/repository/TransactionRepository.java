@@ -112,7 +112,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             "AND t.date BETWEEN :startDate AND :endDate " +
             "AND t.type = 'EXPENSE' " +
             "AND t.isActive = true " +
-            "AND a.type = 'EXPENSE' " +
+            "AND a.accountType = 'EXPENSE' " +
             "GROUP BY a.name " +
             "ORDER BY SUM(td.debitAmount) DESC")
     List<Object[]> findCategoryExpensesByBookIdAndDateRange(
