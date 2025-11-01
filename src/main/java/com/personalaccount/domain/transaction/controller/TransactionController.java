@@ -7,7 +7,6 @@ import com.personalaccount.domain.transaction.dto.request.TransactionCreateReque
 import com.personalaccount.domain.transaction.dto.request.TransactionUpdateRequest;
 import com.personalaccount.domain.transaction.dto.response.TransactionDetailResponse;
 import com.personalaccount.domain.transaction.dto.response.TransactionResponse;
-import com.personalaccount.domain.transaction.dto.response.TransactionWithAmountResponse;
 import com.personalaccount.domain.transaction.entity.JournalEntry;
 import com.personalaccount.domain.transaction.entity.Transaction;
 import com.personalaccount.domain.transaction.entity.TransactionDetail;
@@ -40,8 +39,8 @@ public class TransactionController {
     @PostMapping
     public ResponseEntity<CommonResponse<TransactionResponse>> createTransaction(
             @RequestHeader("X-User-Id") Long userId,
-            @Valid @RequestBody TransactionCreateRequest request
-    ) {
+            @Valid @RequestBody TransactionCreateRequest request) {
+
         log.info("거래 생성 API 호출: userId={}, bookId={}", userId, request.getBookId());
 
         Transaction transaction = transactionService.createTransaction(userId, request);
@@ -53,37 +52,18 @@ public class TransactionController {
     }
 
     @GetMapping
-    public ResponseEntity<CommonResponse<List<?>>> getTransactions(
+    public ResponseEntity<CommonResponse<List<TransactionResponse>>> getTransactions(
             @AuthenticationPrincipal Long userId,
             @RequestParam Long bookId,
-            @RequestParam(required = false) Long accountId,
             @RequestParam(required = false) TransactionType type,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
-    ) {
-        log.info("거래 목록 조회 API 호출: userId={}, bookId={}, accountId={}, type={}, start={}, end={}",
-                userId, bookId, accountId, type, startDate, endDate);
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
-        if (accountId != null) {
-            List<TransactionWithAmountResponse> response =
-                    transactionService.getTransactionsByAccountWithAmount(userId, bookId, accountId);
-            return ResponseEntity.ok(ResponseFactory.success(response));
-        }
-        List<Transaction> transactions;
+        log.info("거래 목록 조회 API: userId={}, bookId={}, type={}, start={}, end={}",
+                userId, bookId, type, startDate, endDate);
 
-        if (startDate != null && endDate != null) {
-            if (startDate.isAfter(endDate)) {
-                return ResponseEntity
-                        .badRequest()
-                        .body(ResponseFactory.error("시작일이 종료일보다 늦을 수 없습니다."));
-            }
-
-            transactions = transactionService.getTransactionsByDateRange(userId, bookId, startDate, endDate);
-        } else if (type != null) {
-            transactions = transactionService.getTransactionsByType(userId, bookId, type);
-        } else {
-            transactions = transactionService.getTransactions(userId, bookId);
-        }
+        List<Transaction> transactions = transactionService.getTransactions(
+                userId, bookId, type, startDate, endDate);
 
         List<TransactionResponse> response = transactions.stream()
                 .map(TransactionMapper::toResponse)
@@ -95,8 +75,8 @@ public class TransactionController {
     @GetMapping("/{id}")
     public ResponseEntity<CommonResponse<TransactionResponse>> getTransaction(
             @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id
-    ) {
+            @PathVariable Long id) {
+
         log.info("거래 상세 조회 API 호출: userId={}, transactionId={}", userId, id);
 
         Transaction transaction = transactionService.getTransaction(userId, id);
@@ -108,22 +88,16 @@ public class TransactionController {
     @GetMapping("/{id}/details")
     public ResponseEntity<CommonResponse<TransactionDetailResponse>> getTransactionDetails(
             @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id
-    ) {
+            @PathVariable Long id) {
+
         log.info("거래 상세 조회(복식부기 포함) API 호출: userId={}, transactionId={}", userId, id);
 
-        // 1. Transaction 조회
         Transaction transaction = transactionService.getTransaction(userId, id);
-
-        // 2. JournalEntry 조회
         List<JournalEntry> journalEntries = journalEntryRepository.findByTransactionId(id);
-
-        // 3. TransactionDetail 조회
         List<List<TransactionDetail>> detailsList = journalEntries.stream()
                 .map(je -> transactionDetailRepository.findByJournalEntryId(je.getId()))
                 .toList();
 
-        // 4. Response 생성
         TransactionDetailResponse response = TransactionMapper.toDetailResponse(
                 transaction, journalEntries, detailsList);
 
@@ -134,8 +108,8 @@ public class TransactionController {
     public ResponseEntity<CommonResponse<TransactionResponse>> updateTransaction(
             @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long id,
-            @Valid @RequestBody TransactionUpdateRequest request
-    ) {
+            @Valid @RequestBody TransactionUpdateRequest request) {
+
         log.info("거래 수정 API 호출: userId={}, transactionId={}", userId, id);
 
         Transaction transaction = transactionService.updateTransaction(userId, id, request);
@@ -147,8 +121,8 @@ public class TransactionController {
     @DeleteMapping("/{id}")
     public ResponseEntity<CommonResponse<Void>> deleteTransaction(
             @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long id
-    ) {
+            @PathVariable Long id) {
+
         log.info("거래 삭제 API 호출: userId={}, transactionId={}", userId, id);
 
         transactionService.deleteTransaction(userId, id);
