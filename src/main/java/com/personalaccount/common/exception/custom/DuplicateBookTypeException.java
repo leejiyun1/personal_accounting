@@ -4,6 +4,14 @@ import com.personalaccount.domain.book.entity.BookType;
 
 public class DuplicateBookTypeException extends RuntimeException {
 
+    public DuplicateBookTypeException() {
+        super("이미 같은 타입의 장부가 존재합니다.");
+    }
+
+    public DuplicateBookTypeException(String message) {
+        super(message);
+    }
+
     public DuplicateBookTypeException(BookType bookType) {
         super(String.format(
                 "이미 %s 장부가 존재합니다. 같은 타입의 장부는 1개만 생성할 수 있습니다.",
