@@ -61,6 +61,10 @@ logging:
 gemini:
   api-key: ${GEMINI_API_KEY}
   api-url: https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent
+  timeout: 30000  # 30초 (밀리초)
+  max-retry: 3
+  connection-timeout: 5000  # 5초
+  read-timeout: 30000  # 30초
 
 # JWT 설정
 jwt:
