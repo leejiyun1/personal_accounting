@@ -1,6 +1,6 @@
 package com.personalaccount.common.exception.custom;
 
-import com.personalaccount.book.entity.BookType;
+import com.personalaccount.domain.book.entity.BookType;
 
 public class DuplicateBookTypeException extends RuntimeException {
 

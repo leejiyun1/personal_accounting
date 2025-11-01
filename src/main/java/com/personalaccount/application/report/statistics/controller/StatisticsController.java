@@ -1,0 +1,72 @@
+package com.personalaccount.application.report.statistics.controller;
+
+import com.personalaccount.common.dto.CommonResponse;
+import com.personalaccount.common.dto.ResponseFactory;
+import com.personalaccount.application.report.statistics.dto.response.AccountBalanceResponse;
+import com.personalaccount.application.report.statistics.dto.response.CategoryStatisticsResponse;
+import com.personalaccount.application.report.statistics.dto.response.MonthlySummaryResponse;
+import com.personalaccount.application.report.statistics.service.StatisticsService;
+import com.personalaccount.domain.transaction.entity.TransactionType;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/v1/statistics")
+@RequiredArgsConstructor
+public class StatisticsController {
+
+    private final StatisticsService statisticsService;
+
+    @GetMapping("/summary")
+    public ResponseEntity<CommonResponse<List<MonthlySummaryResponse>>> getMonthlySummary(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam Long bookId
+    ) {
+        log.info("월별 요약 API 호출: userId={}, bookId={}", userId, bookId);
+
+        List<MonthlySummaryResponse> response = statisticsService.getMonthlySummary(userId, bookId);
+
+        return ResponseEntity.ok(
+                ResponseFactory.success(response)
+        );
+    }
+
+    @GetMapping("/category")
+    public ResponseEntity<CommonResponse<CategoryStatisticsResponse>> getCategoryStatistics(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam Long bookId,
+            @RequestParam String yearMonth,
+            @RequestParam TransactionType type
+    ) {
+        log.info("카테고리별 통계 API 호출: userId={}, bookId={}, yearMonth={}, type={}",
+                userId, bookId, yearMonth, type);
+
+        CategoryStatisticsResponse response = statisticsService.getCategoryStatistics(
+                userId, bookId, yearMonth, type
+        );
+
+        return ResponseEntity.ok(
+                ResponseFactory.success(response)
+        );
+    }
+
+    @GetMapping("/accounts")
+    public ResponseEntity<CommonResponse<List<AccountBalanceResponse>>> getAccountBalances(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam Long bookId
+    ) {
+        log.info("계정별 잔액 API 호출: userId={}, bookId={}", userId, bookId);
+
+        List<AccountBalanceResponse> response = statisticsService.getAccountBalances(userId, bookId);
+
+        return ResponseEntity.ok(
+                ResponseFactory.success(response)
+        );
+    }
+}
