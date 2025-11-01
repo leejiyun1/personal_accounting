@@ -19,4 +19,31 @@ public class CommonResponse<T> {
 
     @Builder.Default
     private LocalDateTime timestamp = LocalDateTime.now();
+
+    // 성공 응답
+    public static <T> CommonResponse<T> success(T data) {
+        return CommonResponse.<T>builder()
+                .success(true)
+                .data(data)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    public static <T> CommonResponse<T> success(T data, String message) {
+        return CommonResponse.<T>builder()
+                .success(true)
+                .data(data)
+                .message(message)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    // 실패 응답
+    public static <T> CommonResponse<T> fail(String message) {
+        return CommonResponse.<T>builder()
+                .success(false)
+                .message(message)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
 }

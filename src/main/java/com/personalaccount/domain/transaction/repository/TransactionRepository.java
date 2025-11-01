@@ -8,31 +8,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
-
-    List<Transaction> findByBookIdAndIsActiveOrderByDateDesc(
-            Long bookId,
-            Boolean isActive
-    );
-
-    List<Transaction> findByBookIdAndTypeAndIsActiveOrderByDateDesc(
-            Long bookId,
-            TransactionType type,
-            Boolean isActive
-    );
-
-    List<Transaction> findByBookIdAndDateBetweenAndIsActiveOrderByDateDesc(
-            Long bookId,
-            LocalDate startDate,
-            LocalDate endDate,
-            Boolean isActive
-    );
 
     @Query("SELECT t FROM Transaction t " +
             "JOIN FETCH t.book b " +
@@ -86,7 +67,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("isActive") Boolean isActive
     );
 
-    @Query("SELECT new com.personalaccount.transaction.dto.response.TransactionWithAmountResponse(" +
+    @Query("SELECT new com.personalaccount.domain.transaction.dto.response.TransactionWithAmountResponse(" +
             "t.id, t.date, t.type, t.memo, " +
             "SUM(td.debitAmount), SUM(td.creditAmount)) " +
             "FROM Transaction t " +
@@ -101,39 +82,5 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("bookId") Long bookId,
             @Param("accountId") Long accountId,
             @Param("isActive") Boolean isActive
-    );
-
-    @Query("SELECT a.name, SUM(td.debitAmount) " +
-            "FROM Transaction t " +
-            "JOIN JournalEntry je ON je.transaction = t " +
-            "JOIN TransactionDetail td ON td.journalEntry = je " +
-            "JOIN Account a ON td.account = a " +
-            "WHERE t.book.id = :bookId " +
-            "AND t.date BETWEEN :startDate AND :endDate " +
-            "AND t.type = 'EXPENSE' " +
-            "AND t.isActive = true " +
-            "AND a.accountType = 'EXPENSE' " +
-            "GROUP BY a.name " +
-            "ORDER BY SUM(td.debitAmount) DESC")
-    List<Object[]> findCategoryExpensesByBookIdAndDateRange(
-            @Param("bookId") Long bookId,
-            @Param("startDate") LocalDate startDate,
-            @Param("endDate") LocalDate endDate
-    );
-
-    // 타입별 총액 조회
-    @Query("SELECT SUM(td.debitAmount - td.creditAmount) " +
-            "FROM Transaction t " +
-            "JOIN JournalEntry je ON je.transaction = t " +
-            "JOIN TransactionDetail td ON td.journalEntry = je " +
-            "WHERE t.book.id = :bookId " +
-            "AND t.date BETWEEN :startDate AND :endDate " +
-            "AND t.type = :type " +
-            "AND t.isActive = true")
-    BigDecimal findTotalAmountByType(
-            @Param("bookId") Long bookId,
-            @Param("startDate") LocalDate startDate,
-            @Param("endDate") LocalDate endDate,
-            @Param("type") TransactionType type
     );
 }
