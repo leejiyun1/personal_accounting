@@ -1,3 +1,4 @@
+// src/main/java/com/personalaccount/common/ratelimit/RateLimitService.java
 package com.personalaccount.common.ratelimit;
 
 import io.github.bucket4j.Bandwidth;
@@ -18,15 +19,41 @@ public class RateLimitService {
 
     private final Map<String, Bucket> cache = new ConcurrentHashMap<>();
 
+    // 키 타입 enum
+    public enum KeyType {
+        LOGIN("login");
+
+        private final String prefix;
+
+        KeyType(String prefix) {
+            this.prefix = prefix;
+        }
+
+        public String getPrefix() {
+            return prefix;
+        }
+    }
+
     /**
      * Rate Limit 검증
      *
-     * @param key 식별자 (IP, userId, email 등)
+     * @param keyType 키 타입
+     * @param identifier 식별자 (email, userId 등)
      * @return true: 허용, false: 제한
      */
-    public boolean tryConsume(String key) {
+    public boolean tryConsume(KeyType keyType, String identifier) {
+        String key = buildKey(keyType, identifier);
         Bucket bucket = cache.computeIfAbsent(key, k -> createBucket());
         return bucket.tryConsume(1);
+    }
+
+    /**
+     * 특정 키의 제한 초기화 (로그인 성공 시)
+     */
+    public void reset(KeyType keyType, String identifier) {
+        String key = buildKey(keyType, identifier);
+        cache.remove(key);
+        log.debug("Rate limit 초기화: key={}", key);
     }
 
     /**
@@ -44,11 +71,8 @@ public class RateLimitService {
                 .build();
     }
 
-    /**
-     * 특정 키의 제한 초기화 (로그인 성공 시)
-     */
-    public void reset(String key) {
-        cache.remove(key);
-        log.debug("Rate limit 초기화: key={}", key);
+    // 키 생성 로직 캡슐화
+    private String buildKey(KeyType keyType, String identifier) {
+        return keyType.getPrefix() + ":" + identifier;
     }
 }

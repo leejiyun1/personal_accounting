@@ -1,3 +1,4 @@
+// src/main/java/com/personalaccount/auth/service/impl/AuthServiceImpl.java
 package com.personalaccount.auth.service.impl;
 
 import com.personalaccount.auth.dto.request.LoginRequest;
@@ -9,6 +10,7 @@ import com.personalaccount.common.exception.custom.RateLimitExceededException;
 import com.personalaccount.common.exception.custom.UnauthorizedException;
 import com.personalaccount.common.exception.custom.UserNotFoundException;
 import com.personalaccount.common.ratelimit.RateLimitService;
+import com.personalaccount.common.ratelimit.RateLimitService.KeyType;  // ✅ 추가
 import com.personalaccount.common.util.LogMaskingUtil;
 import java.util.concurrent.TimeUnit;
 import com.personalaccount.domain.user.entity.User;
@@ -35,11 +37,9 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public LoginResponse login(LoginRequest request) {
-        // 마스킹 적용
         log.info("로그인 시도: email={}", LogMaskingUtil.maskEmail(request.getEmail()));
 
-        String rateLimitKey = "login:" + request.getEmail();
-        if (!rateLimitService.tryConsume(rateLimitKey)) {
+        if (!rateLimitService.tryConsume(KeyType.LOGIN, request.getEmail())) {
             throw new RateLimitExceededException(
                     "로그인 시도 횟수를 초과했습니다. 1분 후 다시 시도해주세요."
             );
@@ -52,12 +52,11 @@ public class AuthServiceImpl implements AuthService {
             throw new UnauthorizedException("이메일 또는 비밀번호가 일치하지 않습니다");
         }
 
-        rateLimitService.reset(rateLimitKey);
+        rateLimitService.reset(KeyType.LOGIN, request.getEmail());
 
         String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
-        // 마스킹 적용
         log.info("로그인 성공: userId={}, email={}",
                 user.getId(),
                 LogMaskingUtil.maskEmail(user.getEmail()));
@@ -107,7 +106,6 @@ public class AuthServiceImpl implements AuthService {
     public void logout(String accessToken) {
         Long userId = jwtTokenProvider.getUserId(accessToken);
 
-        // Redis에 블랙리스트 추가 (TTL: 남은 토큰 유효시간)
         long expiration = jwtTokenProvider.getExpiration(accessToken);
         redisTemplate.opsForValue().set(
                 "blacklist:" + accessToken,
