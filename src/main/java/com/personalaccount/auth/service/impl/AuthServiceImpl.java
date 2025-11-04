@@ -1,4 +1,3 @@
-// src/main/java/com/personalaccount/auth/service/impl/AuthServiceImpl.java
 package com.personalaccount.auth.service.impl;
 
 import com.personalaccount.auth.dto.request.LoginRequest;

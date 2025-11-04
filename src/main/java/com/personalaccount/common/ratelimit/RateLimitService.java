@@ -1,4 +1,3 @@
-// src/main/java/com/personalaccount/common/ratelimit/RateLimitService.java
 package com.personalaccount.common.ratelimit;
 
 import io.github.bucket4j.Bandwidth;
