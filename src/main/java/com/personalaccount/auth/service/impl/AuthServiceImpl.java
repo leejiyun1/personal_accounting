@@ -10,7 +10,7 @@ import com.personalaccount.common.exception.custom.RateLimitExceededException;
 import com.personalaccount.common.exception.custom.UnauthorizedException;
 import com.personalaccount.common.exception.custom.UserNotFoundException;
 import com.personalaccount.common.ratelimit.RateLimitService;
-import com.personalaccount.common.ratelimit.RateLimitService.KeyType;  // ✅ 추가
+import com.personalaccount.common.ratelimit.RateLimitService.KeyType;
 import com.personalaccount.common.util.LogMaskingUtil;
 import java.util.concurrent.TimeUnit;
 import com.personalaccount.domain.user.entity.User;
