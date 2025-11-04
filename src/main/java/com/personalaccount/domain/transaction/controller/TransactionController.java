@@ -38,7 +38,7 @@ public class TransactionController {
 
     @PostMapping
     public ResponseEntity<CommonResponse<TransactionResponse>> createTransaction(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @Valid @RequestBody TransactionCreateRequest request) {
 
         log.info("거래 생성 API 호출: userId={}, bookId={}", userId, request.getBookId());
@@ -74,7 +74,7 @@ public class TransactionController {
 
     @GetMapping("/{id}")
     public ResponseEntity<CommonResponse<TransactionResponse>> getTransaction(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long id) {
 
         log.info("거래 상세 조회 API 호출: userId={}, transactionId={}", userId, id);
@@ -87,7 +87,7 @@ public class TransactionController {
 
     @GetMapping("/{id}/details")
     public ResponseEntity<CommonResponse<TransactionDetailResponse>> getTransactionDetails(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long id) {
 
         log.info("거래 상세 조회(복식부기 포함) API 호출: userId={}, transactionId={}", userId, id);
@@ -106,7 +106,7 @@ public class TransactionController {
 
     @PutMapping("/{id}")
     public ResponseEntity<CommonResponse<TransactionResponse>> updateTransaction(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long id,
             @Valid @RequestBody TransactionUpdateRequest request) {
 
@@ -120,7 +120,7 @@ public class TransactionController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<CommonResponse<Void>> deleteTransaction(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long id) {
 
         log.info("거래 삭제 API 호출: userId={}, transactionId={}", userId, id);

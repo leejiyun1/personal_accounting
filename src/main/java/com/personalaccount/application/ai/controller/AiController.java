@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -21,7 +22,7 @@ public class AiController {
 
     @PostMapping("/chat")
     public ResponseEntity<CommonResponse<AiChatResponse>> chat(
-            @RequestHeader("X-User-Id") Long userId,  // TODO: JWT로 변경
+            @AuthenticationPrincipal Long userId,
             @Valid @RequestBody AiChatRequest request
     ) {
         log.info("AI 대화 API 호출: userId={}, bookId={}", userId, request.getBookId());
