@@ -5,10 +5,13 @@ import com.personalaccount.auth.dto.request.RefreshRequest;
 import com.personalaccount.auth.dto.response.LoginResponse;
 import com.personalaccount.auth.jwt.JwtTokenProvider;
 import com.personalaccount.auth.service.AuthService;
+import com.personalaccount.common.exception.custom.UnauthorizedException;
+import com.personalaccount.common.exception.custom.UserNotFoundException;
 import com.personalaccount.domain.user.entity.User;
 import com.personalaccount.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +23,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
@@ -28,11 +32,11 @@ public class AuthServiceImpl implements AuthService {
 
         // 1. 사용자 조회
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+                .orElseThrow(() -> new UnauthorizedException("이메일 또는 비밀번호가 일치하지 않습니다"));
 
-        // 2. 비밀번호 검증 (임시로 평문 비교)
-        if (!request.getPassword().equals(user.getPassword())) {
-            throw new RuntimeException("비밀번호가 일치하지 않습니다");
+        // 2. 비밀번호 검증
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new UnauthorizedException("이메일 또는 비밀번호가 일치하지 않습니다");
         }
 
         // 3. 토큰 생성
@@ -60,7 +64,7 @@ public class AuthServiceImpl implements AuthService {
 
         // 1. Refresh Token 검증
         if (!jwtTokenProvider.validateToken(request.getRefreshToken())) {
-            throw new RuntimeException("유효하지 않은 리프레시 토큰입니다");
+            throw new UnauthorizedException("유효하지 않은 리프레시 토큰입니다");
         }
 
         // 2. userId 추출
@@ -68,7 +72,7 @@ public class AuthServiceImpl implements AuthService {
 
         // 3. 사용자 조회
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+                .orElseThrow(() -> new UserNotFoundException(userId));
 
         // 4. 새 토큰 발급
         String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
