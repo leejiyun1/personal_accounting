@@ -30,9 +30,10 @@ public class BookServiceImpl implements BookService {
     public Book createBook(Long userId, BookCreateRequest request) {
         log.info("장부 생성 요청: userId={}, bookType={}", userId, request.getBookType());
 
-        // 1. 사용자 존재 확인
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
+        // 1. 사용자 존재 확인 (count 쿼리로 최적화)
+        if (!userRepository.existsById(userId)) {
+            throw new UserNotFoundException(userId);
+        }
 
         // 2. 같은 타입의 장부가 이미 있는지 확인
         boolean exists = bookRepository
@@ -43,8 +44,13 @@ public class BookServiceImpl implements BookService {
             throw new DuplicateBookTypeException(request.getBookType());
         }
 
-        // 3. 장부 생성
-        Book book = BookMapper.toEntity(request, user);
+        // 3. User 프록시 생성 (실제 조회 없이)
+        User userProxy = User.builder()
+                .id(userId)
+                .build();
+
+        // 4. 장부 생성
+        Book book = BookMapper.toEntity(request, userProxy);
         Book savedBook = bookRepository.save(book);
 
         log.info("장부 생성 완료: bookId={}", savedBook.getId());
