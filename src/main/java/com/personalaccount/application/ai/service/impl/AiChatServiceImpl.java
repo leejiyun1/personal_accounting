@@ -1,9 +1,7 @@
-// src/main/java/com/personalaccount/application/ai/service/impl/AiChatServiceImpl.java
 package com.personalaccount.application.ai.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.personalaccount.domain.account.repository.AccountRepository;
 import com.personalaccount.application.ai.client.AiClient;
 import com.personalaccount.application.ai.dto.request.AiChatRequest;
 import com.personalaccount.application.ai.dto.request.GeminiRequest;
@@ -12,12 +10,15 @@ import com.personalaccount.application.ai.dto.response.GeminiResponse;
 import com.personalaccount.application.ai.service.AiChatService;
 import com.personalaccount.application.ai.session.ConversationSession;
 import com.personalaccount.application.ai.session.SessionManager;
+import com.personalaccount.common.exception.custom.AccountNotFoundException;
+import com.personalaccount.common.exception.custom.AiParsingException;
+import com.personalaccount.common.exception.custom.BookNotFoundException;
+import com.personalaccount.common.exception.custom.SessionNotFoundException;
+import com.personalaccount.common.exception.custom.UnauthorizedBookAccessException;
+import com.personalaccount.domain.account.repository.AccountRepository;
 import com.personalaccount.domain.book.entity.Book;
 import com.personalaccount.domain.book.entity.BookType;
 import com.personalaccount.domain.book.repository.BookRepository;
-import com.personalaccount.common.exception.custom.AccountNotFoundException;
-import com.personalaccount.common.exception.custom.BookNotFoundException;
-import com.personalaccount.common.exception.custom.UnauthorizedBookAccessException;
 import com.personalaccount.domain.transaction.dto.mapper.TransactionMapper;
 import com.personalaccount.domain.transaction.dto.request.TransactionCreateRequest;
 import com.personalaccount.domain.transaction.dto.response.TransactionResponse;
@@ -50,28 +51,22 @@ public class AiChatServiceImpl implements AiChatService {
     public AiChatResponse chat(Long userId, AiChatRequest request) {
         log.info("AI 대화 요청: userId={}, bookId={}", userId, request.getBookId());
 
-        // 1. 장부 권한 확인
         validateBookAccess(userId, request.getBookId());
 
-        // 2. 세션 처리
         ConversationSession session = getOrCreateSession(
                 request.getConversationId(),
                 userId,
                 request.getBookId()
         );
 
-        // 3. 사용자 메시지 저장
         session.addMessage("user", request.getMessage());
 
-        // 4. Gemini 호출
         GeminiRequest geminiRequest = buildGeminiRequest(session);
         GeminiResponse geminiResponse = aiClient.sendMessage(geminiRequest);
 
-        // 5. AI 응답 추출
         String aiMessage = extractMessage(geminiResponse);
         session.addMessage("assistant", aiMessage);
 
-        // 6. 거래 생성 가능 여부 판단
         if (isTransactionComplete(aiMessage)) {
             return handleCompleteTransaction(userId, session, aiMessage);
         } else {
@@ -89,20 +84,15 @@ public class AiChatServiceImpl implements AiChatService {
         } else {
             ConversationSession session = sessionManager.getSession(conversationId);
             if (session == null) {
-                throw new RuntimeException("세션을 찾을 수 없습니다. 다시 시작해주세요.");
+                throw new SessionNotFoundException("세션을 찾을 수 없습니다. conversationId: " + conversationId);
             }
             return session;
         }
     }
 
-    /**
-     * Gemini API 요청 생성
-     */
     private GeminiRequest buildGeminiRequest(ConversationSession session) {
-        // 대화 내역을 하나의 텍스트로 합치기
         StringBuilder conversationText = new StringBuilder();
 
-        // System 프롬프트
         conversationText.append("당신은 복식부기 가계부 도우미입니다.\n");
         conversationText.append("사용자의 수입/지출을 자연어로 입력받아 거래 정보를 추출합니다.\n\n");
         conversationText.append("필수 정보:\n");
@@ -118,7 +108,6 @@ public class AiChatServiceImpl implements AiChatService {
         conversationText.append("- 충분: \"COMPLETE: {\\\"type\\\":\\\"INCOME\\\",\\\"amount\\\":50000,\\\"category\\\":\\\"용돈\\\",\\\"paymentMethod\\\":\\\"현금\\\",\\\"date\\\":\\\"2025-10-18\\\"}\"\n\n");
         conversationText.append("---대화 시작---\n\n");
 
-        // 대화 내역 추가
         for (ConversationSession.ChatMessage message : session.getMessages()) {
             conversationText.append(message.getRole()).append(": ").append(message.getContent()).append("\n");
         }
@@ -136,9 +125,6 @@ public class AiChatServiceImpl implements AiChatService {
                 .build();
     }
 
-    /**
-     * Gemini 응답에서 메시지 추출
-     */
     private String extractMessage(GeminiResponse response) {
         return response.getCandidates().get(0)
                 .getContent()
@@ -202,7 +188,7 @@ public class AiChatServiceImpl implements AiChatService {
 
             if (!jsonNode.has("type") || !jsonNode.has("amount") ||
                     !jsonNode.has("category") || !jsonNode.has("paymentMethod")) {
-                throw new RuntimeException("AI 응답에 필수 필드가 누락되었습니다: " + jsonString);
+                throw new AiParsingException("AI 응답에 필수 필드가 누락되었습니다: " + jsonString);
             }
 
             String type = jsonNode.get("type").asText();
@@ -232,9 +218,11 @@ public class AiChatServiceImpl implements AiChatService {
                     .memo("AI 자동 생성")
                     .build();
 
+        } catch (AiParsingException e) {
+            throw e;
         } catch (Exception e) {
             log.error("AI 응답 파싱 실패: {}", aiMessage, e);
-            throw new RuntimeException("거래 정보를 파싱할 수 없습니다.", e);
+            throw new AiParsingException("거래 정보를 파싱할 수 없습니다.", e);
         }
     }
 

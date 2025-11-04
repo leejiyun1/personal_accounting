@@ -128,6 +128,38 @@ public class GlobalExceptionHandler {
                 .body(ResponseFactory.error(ex.getMessage()));
     }
 
+    // === AI 예외 ===
+
+    @ExceptionHandler(AiServiceException.class)
+    public ResponseEntity<CommonResponse<Void>> handleAiServiceException(
+            AiServiceException ex
+    ) {
+        log.error("AiServiceException: {}", ex.getMessage(), ex);
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)  // 503
+                .body(ResponseFactory.error("AI 서비스가 일시적으로 사용 불가능합니다. 잠시 후 다시 시도해주세요."));
+    }
+
+    @ExceptionHandler(SessionNotFoundException.class)
+    public ResponseEntity<CommonResponse<Void>> handleSessionNotFound(
+            SessionNotFoundException ex
+    ) {
+        log.warn("SessionNotFoundException: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)  // 400
+                .body(ResponseFactory.error("대화 세션이 만료되었습니다. 새로운 대화를 시작해주세요."));
+    }
+
+    @ExceptionHandler(AiParsingException.class)
+    public ResponseEntity<CommonResponse<Void>> handleAiParsingException(
+            AiParsingException ex
+    ) {
+        log.error("AiParsingException: {}", ex.getMessage(), ex);
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)  // 500
+                .body(ResponseFactory.error("AI 응답 처리 중 오류가 발생했습니다. 다시 시도해주세요."));
+    }
+
     // === 모든 예외 ===
 
     @ExceptionHandler(Exception.class)

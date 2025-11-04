@@ -3,6 +3,7 @@ package com.personalaccount.application.ai.client.impl;
 import com.personalaccount.application.ai.client.AiClient;
 import com.personalaccount.application.ai.dto.request.GeminiRequest;
 import com.personalaccount.application.ai.dto.response.GeminiResponse;
+import com.personalaccount.common.exception.custom.AiServiceException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -53,13 +54,15 @@ public class AiClientImpl implements AiClient {
                                     || throwable instanceof WebClientResponseException.TooManyRequests)
                             .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
                                 log.error("Gemini API 재시도 횟수 초과: {}", retrySignal.totalRetries());
-                                return new RuntimeException("AI 서비스 호출 실패: 재시도 횟수 초과");
+                                throw new AiServiceException("AI 서비스 호출 실패: 재시도 횟수 초과");
                             }))
                     .doOnError(error -> log.error("Gemini API 호출 실패", error))
                     .block();
+        } catch (AiServiceException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Gemini API 호출 실패", e);
-            throw new RuntimeException("AI 서비스 호출에 실패했습니다.", e);
+            throw new AiServiceException("AI 서비스 호출에 실패했습니다.", e);
         }
     }
 }
