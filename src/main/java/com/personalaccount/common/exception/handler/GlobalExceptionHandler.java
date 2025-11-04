@@ -26,6 +26,17 @@ public class GlobalExceptionHandler {
                 .body(ResponseFactory.error(ex.getMessage()));
     }
 
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<CommonResponse<Void>> handleRateLimitExceeded(
+            RateLimitExceededException ex
+    ) {
+        log.warn("RateLimitExceededException: {}", ex.getMessage());
+
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)  // 429
+                .body(ResponseFactory.error(ex.getMessage()));
+    }
+
     // === User 예외 ===
 
     @ExceptionHandler(UserNotFoundException.class)

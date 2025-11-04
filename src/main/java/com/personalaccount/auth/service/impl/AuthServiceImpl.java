@@ -5,8 +5,10 @@ import com.personalaccount.auth.dto.request.RefreshRequest;
 import com.personalaccount.auth.dto.response.LoginResponse;
 import com.personalaccount.auth.jwt.JwtTokenProvider;
 import com.personalaccount.auth.service.AuthService;
+import com.personalaccount.common.exception.custom.RateLimitExceededException;
 import com.personalaccount.common.exception.custom.UnauthorizedException;
 import com.personalaccount.common.exception.custom.UserNotFoundException;
+import com.personalaccount.common.ratelimit.RateLimitService;
 import com.personalaccount.domain.user.entity.User;
 import com.personalaccount.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,28 +26,40 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
+    private final RateLimitService rateLimitService;
 
     @Override
     @Transactional
     public LoginResponse login(LoginRequest request) {
         log.info("로그인 시도: email={}", request.getEmail());
 
-        // 1. 사용자 조회
+        // 1. Rate Limit 검증
+        String rateLimitKey = "login:" + request.getEmail();
+        if (!rateLimitService.tryConsume(rateLimitKey)) {
+            throw new RateLimitExceededException(
+                    "로그인 시도 횟수를 초과했습니다. 1분 후 다시 시도해주세요."
+            );
+        }
+
+        // 2. 사용자 조회
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UnauthorizedException("이메일 또는 비밀번호가 일치하지 않습니다"));
 
-        // 2. 비밀번호 검증
+        // 3. 비밀번호 검증
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new UnauthorizedException("이메일 또는 비밀번호가 일치하지 않습니다");
         }
 
-        // 3. 토큰 생성
+        // 4. 로그인 성공 시 Rate Limit 초기화
+        rateLimitService.reset(rateLimitKey);
+
+        // 5. 토큰 생성
         String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
         log.info("로그인 성공: userId={}", user.getId());
 
-        // 4. 응답 생성
+        // 6. 응답 생성
         return LoginResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
