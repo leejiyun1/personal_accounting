@@ -1,3 +1,4 @@
+// src/main/java/com/personalaccount/application/ai/service/impl/AiChatServiceImpl.java
 package com.personalaccount.application.ai.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -45,6 +46,7 @@ public class AiChatServiceImpl implements AiChatService {
     private final AccountRepository accountRepository;
 
     @Override
+    @Transactional
     public AiChatResponse chat(Long userId, AiChatRequest request) {
         log.info("AI 대화 요청: userId={}, bookId={}", userId, request.getBookId());
 
@@ -148,7 +150,6 @@ public class AiChatServiceImpl implements AiChatService {
         return message.startsWith("COMPLETE:");
     }
 
-    @Transactional
     private AiChatResponse handleCompleteTransaction(
             Long userId,
             ConversationSession session,
