@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -22,6 +23,7 @@ import java.util.Collections;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Override
     protected void doFilterInternal(
@@ -36,6 +38,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             // 2. 토큰이 있고 유효하면 인증 정보 설정
             if (token != null && jwtTokenProvider.validateToken(token)) {
+
+                // 2-1. 블랙리스트 체크
+                if (isBlacklisted(token)) {
+                    log.warn("블랙리스트 토큰 접근 시도");
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
                 Long userId = jwtTokenProvider.getUserId(token);
 
                 // 3. Spring Security Context에 인증 정보 저장
@@ -64,5 +74,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return bearerToken.substring(7);
         }
         return null;
+    }
+
+    // 블랙리스트 체크
+    private boolean isBlacklisted(String token) {
+        Boolean exists = redisTemplate.hasKey("blacklist:" + token);
+        return exists != null && exists;
     }
 }

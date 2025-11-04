@@ -82,4 +82,24 @@ public class JwtTokenProvider {
             return false;
         }
     }
+
+    /**
+     * 토큰 남은 유효시간 반환 (밀리초)
+     */
+    public long getExpiration(String token) {
+        try {
+            Date expiration = Jwts.parser()
+                    .verifyWith(secretKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload()
+                    .getExpiration();
+
+            long now = System.currentTimeMillis();
+            return Math.max(0, expiration.getTime() - now);  // 음수 방지
+        } catch (JwtException | IllegalArgumentException e) {
+            log.error("토큰 만료시간 추출 실패: {}", e.getMessage());
+            return 0;  // 실패 시 즉시 만료 처리
+        }
+    }
 }

@@ -9,7 +9,8 @@ import com.personalaccount.common.exception.custom.RateLimitExceededException;
 import com.personalaccount.common.exception.custom.UnauthorizedException;
 import com.personalaccount.common.exception.custom.UserNotFoundException;
 import com.personalaccount.common.ratelimit.RateLimitService;
-import com.personalaccount.common.util.LogMaskingUtil;  // ✅ 추가
+import com.personalaccount.common.util.LogMaskingUtil;
+import java.util.concurrent.TimeUnit;
 import com.personalaccount.domain.user.entity.User;
 import com.personalaccount.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.redis.core.RedisTemplate;
 
 @Slf4j
 @Service
@@ -28,6 +30,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final RateLimitService rateLimitService;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Override
     @Transactional
@@ -102,7 +105,17 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void logout(String accessToken) {
-        // TODO: Redis에 블랙리스트 추가
-        log.info("로그아웃 완료");
+        Long userId = jwtTokenProvider.getUserId(accessToken);
+
+        // Redis에 블랙리스트 추가 (TTL: 남은 토큰 유효시간)
+        long expiration = jwtTokenProvider.getExpiration(accessToken);
+        redisTemplate.opsForValue().set(
+                "blacklist:" + accessToken,
+                "logout",
+                expiration,
+                TimeUnit.MILLISECONDS
+        );
+
+        log.info("로그아웃 완료: userId={}", userId);
     }
 }
