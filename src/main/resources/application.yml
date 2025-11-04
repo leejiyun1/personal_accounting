@@ -3,7 +3,7 @@ spring:
     name: personal_accounting
 
   profiles:
-    active: dev
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
   # PostgreSQL 설정
   datasource:
@@ -71,3 +71,11 @@ jwt:
   secret: ${JWT_SECRET}
   access-token-validity: ${JWT_ACCESS_TOKEN_VALIDITY:1800000}
   refresh-token-validity: ${JWT_REFRESH_TOKEN_VALIDITY:604800000}
+
+# CORS 설정
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
+  allowed-headers: "*"
+  allow-credentials: true
+  max-age: 3600
