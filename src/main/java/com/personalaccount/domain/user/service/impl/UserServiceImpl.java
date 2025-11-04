@@ -2,6 +2,7 @@ package com.personalaccount.domain.user.service.impl;
 
 import com.personalaccount.common.exception.custom.DuplicateEmailException;
 import com.personalaccount.common.exception.custom.UserNotFoundException;
+import com.personalaccount.common.util.LogMaskingUtil;
 import com.personalaccount.domain.user.dto.mapper.UserMapper;
 import com.personalaccount.domain.user.dto.request.UserCreateRequest;
 import com.personalaccount.domain.user.dto.request.UserUpdateRequest;
@@ -34,24 +35,24 @@ public class UserServiceImpl implements UserService {
     @Transactional
     @Override
     public User createUser(UserCreateRequest request) {
-        log.info("회원가입 요청: email={}", request.getEmail());
+        // 마스킹 적용
+        log.info("회원가입 요청: email={}", LogMaskingUtil.maskEmail(request.getEmail()));
 
-        // 1. 이메일 중복 체크
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateEmailException(request.getEmail());
         }
 
-        // 2. DTO → Entity 변환
         User user = UserMapper.toEntity(request);
 
-        // 3. 비밀번호 암호화
         String encodedPassword = passwordEncoder.encode(user.getPassword());
         user.changePassword(encodedPassword);
 
-        // 4. DB 저장
         User savedUser = userRepository.save(user);
 
-        log.info("회원가입 완료: id={}, email={}", savedUser.getId(), savedUser.getEmail());
+        // 마스킹 적용
+        log.info("회원가입 완료: id={}, email={}",
+                savedUser.getId(),
+                LogMaskingUtil.maskEmail(savedUser.getEmail()));
 
         return savedUser;
     }
@@ -61,11 +62,9 @@ public class UserServiceImpl implements UserService {
     public User updateUser(Long id, UserUpdateRequest request) {
         log.info("사용자 수정 요청: id={}", id);
 
-        // 1. 사용자 조회
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(id));
 
-        // 2. 이름 변경 (Dirty Checking으로 자동 UPDATE)
         if (request.getName() != null) {
             user.changeName(request.getName());
         }
@@ -80,11 +79,9 @@ public class UserServiceImpl implements UserService {
     public void deleteUser(Long id) {
         log.info("사용자 삭제 요청: id={}", id);
 
-        // 1. 사용자 조회
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(id));
 
-        // 2. 삭제
         userRepository.delete(user);
 
         log.info("사용자 삭제 완료: id={}", id);

@@ -9,6 +9,7 @@ import com.personalaccount.common.exception.custom.RateLimitExceededException;
 import com.personalaccount.common.exception.custom.UnauthorizedException;
 import com.personalaccount.common.exception.custom.UserNotFoundException;
 import com.personalaccount.common.ratelimit.RateLimitService;
+import com.personalaccount.common.util.LogMaskingUtil;  // ✅ 추가
 import com.personalaccount.domain.user.entity.User;
 import com.personalaccount.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,9 +32,9 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public LoginResponse login(LoginRequest request) {
-        log.info("로그인 시도: email={}", request.getEmail());
+        // 마스킹 적용
+        log.info("로그인 시도: email={}", LogMaskingUtil.maskEmail(request.getEmail()));
 
-        // 1. Rate Limit 검증
         String rateLimitKey = "login:" + request.getEmail();
         if (!rateLimitService.tryConsume(rateLimitKey)) {
             throw new RateLimitExceededException(
@@ -41,25 +42,23 @@ public class AuthServiceImpl implements AuthService {
             );
         }
 
-        // 2. 사용자 조회
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UnauthorizedException("이메일 또는 비밀번호가 일치하지 않습니다"));
 
-        // 3. 비밀번호 검증
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new UnauthorizedException("이메일 또는 비밀번호가 일치하지 않습니다");
         }
 
-        // 4. 로그인 성공 시 Rate Limit 초기화
         rateLimitService.reset(rateLimitKey);
 
-        // 5. 토큰 생성
         String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
-        log.info("로그인 성공: userId={}", user.getId());
+        // 마스킹 적용
+        log.info("로그인 성공: userId={}, email={}",
+                user.getId(),
+                LogMaskingUtil.maskEmail(user.getEmail()));
 
-        // 6. 응답 생성
         return LoginResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
@@ -76,19 +75,15 @@ public class AuthServiceImpl implements AuthService {
     public LoginResponse refresh(RefreshRequest request) {
         log.info("토큰 갱신 시도");
 
-        // 1. Refresh Token 검증
         if (!jwtTokenProvider.validateToken(request.getRefreshToken())) {
             throw new UnauthorizedException("유효하지 않은 리프레시 토큰입니다");
         }
 
-        // 2. userId 추출
         Long userId = jwtTokenProvider.getUserId(request.getRefreshToken());
 
-        // 3. 사용자 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));
 
-        // 4. 새 토큰 발급
         String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
 
         log.info("토큰 갱신 성공: userId={}", userId);
