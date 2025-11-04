@@ -13,6 +13,19 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    // === Auth 예외 ===
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<CommonResponse<Void>> handleUnauthorized(
+            UnauthorizedException ex
+    ) {
+        log.warn("UnauthorizedException: {}", ex.getMessage());
+
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)  // 401
+                .body(ResponseFactory.error(ex.getMessage()));
+    }
+
     // === User 예외 ===
 
     @ExceptionHandler(UserNotFoundException.class)
