@@ -107,7 +107,7 @@ public class TransactionServiceImpl implements TransactionService {
     public Transaction getTransaction(Long userId, Long id) {
         log.debug("거래 상세 조회: userId={}, transactionId={}", userId, id);
 
-        Transaction transaction = transactionRepository.findByIdAndIsActive(id, true)
+        Transaction transaction = transactionRepository.findByIdWithBookAndUser(id)
                 .orElseThrow(() -> new TransactionNotFoundException(id));
 
         if (!transaction.getBook().getUser().getId().equals(userId)) {
