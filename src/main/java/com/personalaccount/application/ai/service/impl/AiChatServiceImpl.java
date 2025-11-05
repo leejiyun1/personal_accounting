@@ -47,7 +47,7 @@ public class AiChatServiceImpl implements AiChatService {
     private final AccountRepository accountRepository;
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public AiChatResponse chat(Long userId, AiChatRequest request) {
         log.info("AI 대화 요청: userId={}, bookId={}", userId, request.getBookId());
 
