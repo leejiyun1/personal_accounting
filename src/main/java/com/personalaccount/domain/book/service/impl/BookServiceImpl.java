@@ -30,12 +30,10 @@ public class BookServiceImpl implements BookService {
     public Book createBook(Long userId, BookCreateRequest request) {
         log.info("장부 생성 요청: userId={}, bookType={}", userId, request.getBookType());
 
-        // 1. 사용자 존재 확인 (count 쿼리로 최적화)
         if (!userRepository.existsById(userId)) {
             throw new UserNotFoundException(userId);
         }
 
-        // 2. 같은 타입의 장부가 이미 있는지 확인
         boolean exists = bookRepository
                 .findByUserIdAndBookTypeAndIsActive(userId, request.getBookType(), true)
                 .isPresent();
@@ -44,13 +42,9 @@ public class BookServiceImpl implements BookService {
             throw new DuplicateBookTypeException(request.getBookType());
         }
 
-        // 3. User 프록시 생성 (실제 조회 없이)
-        User userProxy = User.builder()
-                .id(userId)
-                .build();
+        User user = userRepository.getReferenceById(userId);
 
-        // 4. 장부 생성
-        Book book = BookMapper.toEntity(request, userProxy);
+        Book book = BookMapper.toEntity(request, user);
         Book savedBook = bookRepository.save(book);
 
         log.info("장부 생성 완료: bookId={}", savedBook.getId());
@@ -69,12 +63,10 @@ public class BookServiceImpl implements BookService {
     public Book getBook(Long id, Long userId) {
         log.debug("장부 조회: bookId={}, userId={}", id, userId);
 
-        // 1. 장부 조회
-        Book book = bookRepository.findByIdAndIsActiveWithUser(id, true)
+        Book book = bookRepository.findByIdAndIsActive(id, true)
                 .orElseThrow(() -> new BookNotFoundException(id));
 
-        // 2. 권한 확인 (본인 장부인지)
-        if (!book.getUser().getId().equals(userId)){
+        if (!book.getUser().getId().equals(userId)) {
             throw new UnauthorizedBookAccessException(id);
         }
         return book;
@@ -85,11 +77,9 @@ public class BookServiceImpl implements BookService {
     public Book updateBook(Long id, Long userId, BookUpdateRequest request) {
         log.info("장부 수정 요청: bookId={}, userId={}", id, userId);
 
-        // 1. 장부 조회 및 권한 확인
         Book book = getBook(id, userId);
 
-        // 2. 이름 변경
-        if (request.getName() !=null) {
+        if (request.getName() != null) {
             book.changeName(request.getName());
         }
 
@@ -103,10 +93,8 @@ public class BookServiceImpl implements BookService {
     public void deleteBook(Long id, Long userId) {
         log.info("장부 삭제 요청: bookId={}, userId={}", id, userId);
 
-        // 1. 장부 조회 및 권한 확인
         Book book = getBook(id, userId);
 
-        // 2. 비활성화
         book.deactivate();
 
         log.info("장부 삭제 완료: bookId={}", id);
