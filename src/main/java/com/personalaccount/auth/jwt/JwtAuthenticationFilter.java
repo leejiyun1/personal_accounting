@@ -6,7 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -23,7 +23,7 @@ import java.util.Collections;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final RedisTemplate<String, String> redisTemplate;
+    private final StringRedisTemplate stringRedisTemplate; // Spring Boot 자동 설정 빈 사용
 
     @Override
     protected void doFilterInternal(
@@ -33,13 +33,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         try {
-            // 1. Authorization 헤더에서 토큰 추출
+            // Authorization 헤더에서 토큰 추출
             String token = extractToken(request);
 
-            // 2. 토큰이 있고 유효하면 인증 정보 설정
+            // 토큰이 있고 유효하면 인증 정보 설정
             if (token != null && jwtTokenProvider.validateToken(token)) {
 
-                // 2-1. 블랙리스트 체크
+                // 블랙리스트 체크
                 if (isBlacklisted(token)) {
                     log.warn("블랙리스트 토큰 접근 시도");
                     filterChain.doFilter(request, response);
@@ -48,7 +48,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 Long userId = jwtTokenProvider.getUserId(token);
 
-                // 3. Spring Security Context에 인증 정보 저장
+                // Spring Security Context에 인증 정보 저장
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 userId,
@@ -78,7 +78,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     // 블랙리스트 체크
     private boolean isBlacklisted(String token) {
-        Boolean exists = redisTemplate.hasKey("blacklist:" + token);
+        Boolean exists = stringRedisTemplate.hasKey("blacklist:" + token);
         return exists != null && exists;
     }
 }
