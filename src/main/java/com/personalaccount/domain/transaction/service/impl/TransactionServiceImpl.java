@@ -110,7 +110,9 @@ public class TransactionServiceImpl implements TransactionService {
         Transaction transaction = transactionRepository.findByIdAndIsActive(id, true)
                 .orElseThrow(() -> new TransactionNotFoundException(id));
 
-        validateBookAccess(userId, transaction.getBook().getId());
+        if (!transaction.getBook().getUser().getId().equals(userId)) {
+            throw new UnauthorizedBookAccessException(transaction.getBook().getId());
+        }
 
         return transaction;
     }
