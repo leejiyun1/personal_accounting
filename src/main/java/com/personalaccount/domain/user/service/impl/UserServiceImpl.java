@@ -35,7 +35,6 @@ public class UserServiceImpl implements UserService {
     @Transactional
     @Override
     public User createUser(UserCreateRequest request) {
-        // 마스킹 적용
         log.info("회원가입 요청: email={}", LogMaskingUtil.maskEmail(request.getEmail()));
 
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -49,7 +48,6 @@ public class UserServiceImpl implements UserService {
 
         User savedUser = userRepository.save(user);
 
-        // 마스킹 적용
         log.info("회원가입 완료: id={}, email={}",
                 savedUser.getId(),
                 LogMaskingUtil.maskEmail(savedUser.getEmail()));
@@ -82,8 +80,8 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(id));
 
-        userRepository.delete(user);
+        user.deactivate();
 
-        log.info("사용자 삭제 완료: id={}", id);
+        log.info("사용자 비활성화 완료: id={}", id);
     }
 }
