@@ -55,6 +55,7 @@ dependencies {
 
     // Database
     runtimeOnly 'org.postgresql:postgresql'
+    testImplementation 'com.h2database:h2'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
@@ -70,22 +71,8 @@ dependencies {
 
     // Rate Limiting
     implementation 'com.bucket4j:bucket4j-core:8.10.1'
-    implementation 'com.bucket4j:bucket4j-redis:8.10.1'
-    implementation 'javax.cache:cache-api:1.1.1'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
-}
-
-// .env 파일 자동 로드
-tasks.withType(JavaExec) {
-    if (file('.env').exists()) {
-        file('.env').readLines().each { line ->
-            if (line && !line.startsWith('#') && line.contains('=')) {
-                def (key, value) = line.split('=', 2)
-                environment key.trim(), value.trim()
-            }
-        }
-    }
 }
