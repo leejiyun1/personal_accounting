@@ -4,7 +4,7 @@ from datetime import datetime
 
 # 설정
 BASE_URL = "http://localhost:8080/api/v1"
-TOKEN = "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxIiwiZW1haWwiOiJ0ZXN0QHRlc3QuY29tIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc2MTE3MzI4MywiZXhwIjoxNzYxMTc1MDgzfQ.sKCgGheBfjr-dfwMCYwETl9uReKiYaeTkNl_SsITgv2phg2wZ6K9QBJGHR1PeWdE"  # 로그인 후 받은 토큰
+TOKEN = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIxIiwiZW1haWwiOiJ0ZXN0QHRlc3QuY29tIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc2NDAyOTk0MCwiZXhwIjoxNzY0MDMxNzQwfQ.FdNZQf7jr4pdbWsyTNNV5PWX4EXDHTyGWpjHKGhZhQzS6AvClkDC7WhG5JyIwUGsx58ksTvSD860Kt-fJFda3w"  # 로그인 후 받은 토큰
 
 headers = {
     "Authorization": f"Bearer {TOKEN}",
@@ -13,28 +13,28 @@ headers = {
 }
 
 # 장부 ID (생성한 사업 장부 ID)
-BOOK_ID = 2  # 실제 장부 ID로 변경
+BOOK_ID = 4  # 실제 장부 ID로 변경
 
 # 사업자 계정과목 ID (DB에서 확인한 실제 ID)
 REVENUE_ACCOUNTS = {
-    "매출": 21,
-    "용역수입": 22,
+    "매출": 26,
+    "용역수입": 27,
 }
 
 EXPENSE_ACCOUNTS = {
-    "외주비": 25,
-    "임차료": 27,
-    "광고선전비": 28,
-    "접대비": 29,
-    "통신비": 30,
-    "소모품비": 31,
-    "운반비": 32,
+    "외주비": 31,
+    "임차료": 35,
+    "광고선전비": 37,
+    "접대비": 38,
+    "통신비": 39,
+    "소모품비": 41,
+    "운반비": 43,
 }
 
 PAYMENT_METHODS = {
-    "사업자계좌": 19,
-    "법인카드": 20,
-    "현금": 18,
+    "사업자계좌": 24,
+    "법인카드": 25,
+    "현금": 23,
 }
 
 def create_transaction(date, trans_type, category_id, payment_id, amount, memo):

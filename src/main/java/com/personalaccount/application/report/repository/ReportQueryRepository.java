@@ -207,4 +207,27 @@ public class ReportQueryRepository {
                 .orderBy(transaction.date.asc())
                 .fetch();
     }
+
+    /**
+     * 특정 계정의 현재 잔액 (차변 - 대변)
+     */
+    public BigDecimal findAccountBalance(Long bookId, Long accountId) {
+        QTransaction transaction = QTransaction.transaction;
+        QJournalEntry journalEntry = QJournalEntry.journalEntry;
+        QTransactionDetail detail = QTransactionDetail.transactionDetail;
+
+        BigDecimal result = queryFactory
+                .select(detail.debitAmount.subtract(detail.creditAmount).sum())
+                .from(transaction)
+                .join(journalEntry).on(journalEntry.transaction.eq(transaction))
+                .join(detail).on(detail.journalEntry.eq(journalEntry))
+                .where(
+                        transaction.book.id.eq(bookId),
+                        detail.account.id.eq(accountId),
+                        transaction.isActive.isTrue()
+                )
+                .fetchOne();
+
+        return result != null ? result : BigDecimal.ZERO;
+    }
 }

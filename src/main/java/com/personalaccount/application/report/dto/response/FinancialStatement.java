@@ -16,6 +16,7 @@ public class FinancialStatement {
     private BigDecimal totalIncome;      // 총 수입
     private BigDecimal totalExpense;     // 총 지출
     private BigDecimal netProfit;        // 순이익
+    private Double profitRate;           // 수익률
 
     // 재무상태표
     private BigDecimal totalAssets;      // 총 자산

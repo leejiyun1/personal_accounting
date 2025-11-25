@@ -102,8 +102,27 @@ public class ReportServiceImpl implements ReportService {
 
         validateBookAccess(userId, bookId);
 
-        // TODO: ReportQueryRepository에 계정별 잔액 쿼리 추가 필요
-        return new ArrayList<>();
+        // bookType 조회
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new BookNotFoundException("장부를 찾을 수 없습니다"));
+
+        // 해당 장부 타입의 PAYMENT_METHOD 계정만 조회
+        return accountRepository.findByBookTypeAndAccountTypeAndIsActive(
+                        book.getBookType(),
+                        com.personalaccount.domain.account.entity.AccountType.PAYMENT_METHOD,
+                        true)
+                .stream()
+                .map(account -> {
+                    // 각 계정의 잔액 계산 (수입 - 지출)
+                    BigDecimal balance = reportQueryRepository.findAccountBalance(bookId, account.getId());
+
+                    return AccountBalance.builder()
+                            .accountId(account.getId())
+                            .accountName(account.getName())
+                            .balance(balance)
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -120,6 +139,13 @@ public class ReportServiceImpl implements ReportService {
         BigDecimal totalExpense = reportQueryRepository.findTotalExpense(bookId, startDate, endDate);
         BigDecimal netProfit = totalIncome.subtract(totalExpense);
 
+        // 수익률 계산: (순이익 / 총수입) * 100
+        Double profitRate = totalIncome.compareTo(BigDecimal.ZERO) > 0
+                ? netProfit.divide(totalIncome, 4, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .doubleValue()
+                : 0.0;
+
         // 재무상태표
         BigDecimal totalAssets = reportQueryRepository.findTotalAssets(bookId, endDate);
         BigDecimal totalLiabilities = reportQueryRepository.findTotalLiabilities(bookId, endDate);
@@ -129,6 +155,7 @@ public class ReportServiceImpl implements ReportService {
                 .totalIncome(totalIncome)
                 .totalExpense(totalExpense)
                 .netProfit(netProfit)
+                .profitRate(profitRate)
                 .totalAssets(totalAssets)
                 .totalLiabilities(totalLiabilities)
                 .totalEquity(totalEquity)

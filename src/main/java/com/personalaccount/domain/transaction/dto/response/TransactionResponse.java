@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -19,6 +20,7 @@ public class TransactionResponse {
     private Long bookId;
     private LocalDate date;
     private TransactionType type;
+    private BigDecimal amount;
     private String memo;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

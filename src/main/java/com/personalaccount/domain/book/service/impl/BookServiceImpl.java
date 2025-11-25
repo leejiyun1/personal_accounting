@@ -1,5 +1,9 @@
 package com.personalaccount.domain.book.service.impl;
 
+import com.personalaccount.domain.account.constants.DefaultAccounts;
+import com.personalaccount.domain.account.constants.DefaultAccounts.AccountTemplate;
+import com.personalaccount.domain.account.entity.Account;
+import com.personalaccount.domain.account.repository.AccountRepository;
 import com.personalaccount.domain.book.dto.mapper.BookMapper;
 import com.personalaccount.domain.book.dto.request.BookCreateRequest;
 import com.personalaccount.domain.book.dto.request.BookUpdateRequest;
@@ -14,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -24,6 +29,7 @@ public class BookServiceImpl implements BookService {
 
     private final BookRepository bookRepository;
     private final UserRepository userRepository;
+    private final AccountRepository accountRepository;
 
     @Transactional
     @Override
@@ -47,9 +53,30 @@ public class BookServiceImpl implements BookService {
         Book book = BookMapper.toEntity(request, user);
         Book savedBook = bookRepository.save(book);
 
-        log.info("장부 생성 완료: bookId={}", savedBook.getId());
+        // 기본 계정과목 생성
+        createDefaultAccounts(savedBook);
+
+        log.info("장부 생성 완료: bookId={}, 기본 계정과목 생성 완료", savedBook.getId());
 
         return savedBook;
+    }
+
+    private void createDefaultAccounts(Book book) {
+        AccountTemplate[] templates = DefaultAccounts.getDefaultAccounts(book.getBookType());
+
+        List<Account> accounts = new ArrayList<>();
+        for (AccountTemplate template : templates) {
+            Account account = Account.builder()
+                    .code(template.code)
+                    .name(template.name)
+                    .accountType(template.accountType)
+                    .bookType(book.getBookType())
+                    .build();
+            accounts.add(account);
+        }
+
+        accountRepository.saveAll(accounts);
+        log.debug("기본 계정과목 {}개 생성 완료", accounts.size());
     }
 
     @Override

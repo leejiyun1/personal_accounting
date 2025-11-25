@@ -5,6 +5,7 @@ import com.personalaccount.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
@@ -29,6 +30,9 @@ public class Transaction extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private TransactionType type;
+
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal amount;
 
     @Column(length = 500)
     private String memo;

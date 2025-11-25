@@ -61,6 +61,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .book(book)
                 .date(request.getDate())
                 .type(request.getType())
+                .amount(request.getAmount())
                 .memo(request.getMemo())
                 .build();
         Transaction savedTransaction = transactionRepository.save(transaction);

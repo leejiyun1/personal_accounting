@@ -21,6 +21,7 @@ public class TransactionDetailResponse {
     private Long bookId;
     private LocalDate date;
     private TransactionType type;
+    private BigDecimal amount;
     private String memo;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
