@@ -139,26 +139,34 @@ public class ReportServiceImpl implements ReportService {
         BigDecimal totalExpense = reportQueryRepository.findTotalExpense(bookId, startDate, endDate);
         BigDecimal netProfit = totalIncome.subtract(totalExpense);
 
-        // 수익률 계산: (순이익 / 총수입) * 100
+        // 수익률 계산
         Double profitRate = totalIncome.compareTo(BigDecimal.ZERO) > 0
                 ? netProfit.divide(totalIncome, 4, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100))
                 .doubleValue()
                 : 0.0;
 
+        IncomeStatement incomeStatement = IncomeStatement.builder()
+                .totalIncome(totalIncome)
+                .totalExpense(totalExpense)
+                .netProfit(netProfit)
+                .profitRate(profitRate)
+                .build();
+
         // 재무상태표
         BigDecimal totalAssets = reportQueryRepository.findTotalAssets(bookId, endDate);
         BigDecimal totalLiabilities = reportQueryRepository.findTotalLiabilities(bookId, endDate);
         BigDecimal totalEquity = totalAssets.subtract(totalLiabilities);
 
-        return FinancialStatement.builder()
-                .totalIncome(totalIncome)
-                .totalExpense(totalExpense)
-                .netProfit(netProfit)
-                .profitRate(profitRate)
+        BalanceSheet balanceSheet = BalanceSheet.builder()
                 .totalAssets(totalAssets)
                 .totalLiabilities(totalLiabilities)
                 .totalEquity(totalEquity)
+                .build();
+
+        return FinancialStatement.builder()
+                .incomeStatement(incomeStatement)
+                .balanceSheet(balanceSheet)
                 .build();
     }
 

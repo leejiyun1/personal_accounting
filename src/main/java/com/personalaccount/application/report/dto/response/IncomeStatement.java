@@ -5,11 +5,15 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class FinancialStatement {
-    private IncomeStatement incomeStatement;
-    private BalanceSheet balanceSheet;
+public class IncomeStatement {
+    private BigDecimal totalIncome;
+    private BigDecimal totalExpense;
+    private BigDecimal netProfit;
+    private Double profitRate;
 }
