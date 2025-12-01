@@ -8,8 +8,16 @@ import com.personalaccount.domain.transaction.entity.TransactionDetail;
 
 import java.util.List;
 
+/**
+ * Transaction Entity ↔ DTO 변환 Mapper
+ * - static 메서드로 변환 제공
+ */
 public class TransactionMapper {
 
+    /**
+     * Entity → Response DTO 변환
+     * - 단순 거래 정보만 (복식부기 제외)
+     */
     public static TransactionResponse toResponse(Transaction transaction) {
         if (transaction == null) {
             return null;
@@ -27,6 +35,14 @@ public class TransactionMapper {
                 .build();
     }
 
+    /**
+     * Entity → DetailResponse DTO 변환
+     * - 복식부기 상세 포함 (JournalEntry, TransactionDetail)
+     *
+     * @param transaction 거래 Entity
+     * @param journalEntries 분개 목록
+     * @param detailsList 차변/대변 상세 목록 (분개별)
+     */
     public static TransactionDetailResponse toDetailResponse(
             Transaction transaction,
             List<JournalEntry> journalEntries,
@@ -36,12 +52,14 @@ public class TransactionMapper {
             return null;
         }
 
+        // 분개 정보 변환
         List<TransactionDetailResponse.JournalEntryInfo> journalEntryInfos =
                 journalEntries.stream()
                         .map(je -> {
                             int index = journalEntries.indexOf(je);
                             List<TransactionDetail> details = detailsList.get(index);
 
+                            // 차변/대변 상세 변환
                             List<TransactionDetailResponse.DetailInfo> detailInfos =
                                     details.stream()
                                             .map(detail -> TransactionDetailResponse.DetailInfo.builder()

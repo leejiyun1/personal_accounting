@@ -10,6 +10,7 @@ import java.time.LocalDate;
 
 /**
  * 거래 검색 조건 DTO
+ * - QueryDSL 동적 쿼리에 사용
  */
 @Getter
 @NoArgsConstructor
@@ -17,9 +18,30 @@ import java.time.LocalDate;
 @Builder
 public class TransactionSearchCondition {
 
-    private Long bookId;              // 필수
-    private TransactionType type;     // 선택 (null이면 전체)
-    private LocalDate startDate;      // 선택
-    private LocalDate endDate;        // 선택
-    private String keyword;           // 선택 (메모 검색)
+    /**
+     * 장부 ID (필수)
+     */
+    private Long bookId;
+
+    /**
+     * 거래 타입 (선택)
+     * - null이면 전체 조회
+     */
+    private TransactionType type;
+
+    /**
+     * 시작 날짜 (선택)
+     */
+    private LocalDate startDate;
+
+    /**
+     * 종료 날짜 (선택)
+     */
+    private LocalDate endDate;
+
+    /**
+     * 메모 검색 키워드 (선택)
+     * - 대소문자 구분 없음
+     */
+    private String keyword;
 }
