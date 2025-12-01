@@ -1,7 +1,5 @@
 package com.personalaccount.domain.transaction.service;
 
-import com.personalaccount.common.exception.custom.AccountNotFoundException;
-import com.personalaccount.common.exception.custom.BookNotFoundException;
 import com.personalaccount.domain.account.entity.Account;
 import com.personalaccount.domain.account.entity.AccountType;
 import com.personalaccount.domain.account.repository.AccountRepository;
@@ -65,6 +63,7 @@ class TransactionServiceTest {
     private User testUser;
     private Book testBook;
     private Account revenueAccount;
+    private Account expenseAccount;
     private Account paymentAccount;
 
     @BeforeEach
@@ -90,6 +89,15 @@ class TransactionServiceTest {
                 .code("5100")
                 .name("급여")
                 .accountType(AccountType.REVENUE)
+                .bookType(BookType.PERSONAL)
+                .build();
+
+        // 비용 계정 (식비)
+        expenseAccount = Account.builder()
+                .id(3L)
+                .code("6100")
+                .name("식비")
+                .accountType(AccountType.EXPENSE)
                 .bookType(BookType.PERSONAL)
                 .build();
 
@@ -208,5 +216,112 @@ class TransactionServiceTest {
         assertThat(totalDebit).isEqualByComparingTo(totalCredit);
         assertThat(totalDebit).isEqualByComparingTo("500000");
         assertThat(totalCredit).isEqualByComparingTo("500000");
+    }
+
+    @Test
+    @DisplayName("지출거래_복식부기_정상생성_전체검증")
+    void createExpenseTransacion_Success() {
+        // Given: 지출 거래 요청 데이터
+        TransactionCreateRequest request = TransactionCreateRequest.builder()
+                .bookId(1L)
+                .date(LocalDate.now())
+                .type(TransactionType.EXPENSE)
+                .amount(new BigDecimal("30000"))
+                .categoryId(3L)
+                .paymentMethodId(2L)
+                .memo("점심값")
+                .build();
+
+        // Mock 동작 정의
+        given(bookRepository.findByIdAndIsActive(1L, true))
+                .willReturn(Optional.of(testBook));
+
+        given(accountRepository.findById(3L))
+                .willReturn(Optional.of(expenseAccount));
+
+        given(accountRepository.findById(2L))
+                .willReturn(Optional.of(paymentAccount));
+
+        given(transactionRepository.save(any(Transaction.class)))
+                .willAnswer(invocation -> {
+                    Transaction tx = invocation.getArgument(0);
+                    return Transaction.builder()
+                            .id(2L)
+                            .book(tx.getBook())
+                            .date(tx.getDate())
+                            .type(tx.getType())
+                            .amount(tx.getAmount())
+                            .memo(tx.getMemo())
+                            .build();
+                });
+
+        given(journalEntryRepository.save(any(JournalEntry.class)))
+                .willAnswer(invocation -> {
+                   JournalEntry je = invocation.getArgument(0);
+                   return JournalEntry.builder()
+                           .id(2L)
+                           .transaction(je.getTransaction())
+                           .date(je.getDate())
+                           .description(je.getDescription())
+                           .build();
+                });
+
+        // When: 거래 생성 실행
+        Transaction result = transactionService.createTransaction(testUser.getId(), request);
+
+        // Then: 기본 검증
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(2L);
+        assertThat(result.getType()).isEqualTo(TransactionType.EXPENSE);
+        assertThat(result.getAmount()).isEqualByComparingTo("30000");
+        assertThat(result.getMemo()).isEqualTo("점심값");
+
+        // Repository 호출 횟수 검증
+        verify(transactionRepository, times(1)).save(any(Transaction.class));
+        verify(journalEntryRepository, times(1)).save(any(JournalEntry.class));
+        verify(transactionDetailRepository, times(1)).saveAll(anyList());
+
+        // ArgumentCaptor로 저장된 TransactionDetail 캡처
+        verify(transactionDetailRepository).saveAll(detailsCaptor.capture());
+        List<TransactionDetail> savedDetails = detailsCaptor.getValue();
+
+        // 2개 생성 확인
+        assertThat(savedDetails).hasSize(2);
+
+        // 차변/대변 분리
+        TransactionDetail debitDetail = savedDetails.stream()
+                .filter(d -> d.getDetailType() == DetailType.DEBIT)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("차변 내역이 없습니다"));
+
+        TransactionDetail creditDetail = savedDetails.stream()
+                .filter(d -> d.getDetailType() == DetailType.CREDIT)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("대변 내역이 없습니다"));
+
+        // 차변 검증 (식비 - 비용)
+        assertThat(debitDetail.getAccount().getId()).isEqualTo(3L);
+        assertThat(debitDetail.getAccount().getName()).isEqualTo("식비");
+        assertThat(debitDetail.getDebitAmount()).isEqualByComparingTo("30000");
+        assertThat(debitDetail.getCreditAmount()).isEqualByComparingTo("0");
+
+        // 대변 검증 (보통예금 - 결제수단)
+        assertThat(creditDetail.getAccount().getId()).isEqualTo(2L);
+        assertThat(creditDetail.getAccount().getName()).isEqualTo("보통예금");
+        assertThat(creditDetail.getDebitAmount()).isEqualByComparingTo("0");
+        assertThat(creditDetail.getCreditAmount()).isEqualByComparingTo("30000");
+
+        // 대차평형 검증 (차변 합계 = 대변 합계)
+        BigDecimal totalDebit = savedDetails.stream()
+                .map(TransactionDetail::getDebitAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalCredit = savedDetails.stream()
+                .map(TransactionDetail::getCreditAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        assertThat(totalDebit).isEqualByComparingTo(totalCredit);
+        assertThat(totalDebit).isEqualByComparingTo("30000");
+        assertThat(totalCredit).isEqualByComparingTo("30000");
     }
 }
