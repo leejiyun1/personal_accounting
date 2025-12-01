@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -41,22 +42,25 @@ public class TransactionServiceImpl implements TransactionService {
         log.info("거래 생성 요청: userId={}, bookId={}, type={}, amount={}",
                 userId, request.getBookId(), request.getType(), request.getAmount());
 
-        Book book = bookRepository.findByIdAndIsActive(request.getBookId(), true)
-                .orElseThrow(() -> new BookNotFoundException(request.getBookId()));
+        // === 1단계: 검증 ===
 
-        if (!book.getUser().getId().equals(userId)) {
-            throw new UnauthorizedBookAccessException(request.getBookId());
-        }
+        // 1-1. 장부 존재 & 권한 검증 (메서드로 통일)
+        Book book = validateAndGetBook(userId, request.getBookId());
 
+        // 1-2. 계정과목 존재 확인
         Account category = accountRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new AccountNotFoundException(request.getCategoryId()));
 
         Account paymentMethod = accountRepository.findById(request.getPaymentMethodId())
                 .orElseThrow(() -> new AccountNotFoundException(request.getPaymentMethodId()));
 
+        // 1-3. 계정과목 타입 검증 (간결화)
         validateAccountTypes(request.getType(), category, paymentMethod);
+
+        // 1-4. 장부 타입 일치 검증
         validateBookTypes(book, category, paymentMethod);
 
+        // === 2단계: Transaction 생성 & 저장 ===
         Transaction transaction = Transaction.builder()
                 .book(book)
                 .date(request.getDate())
@@ -66,6 +70,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
         Transaction savedTransaction = transactionRepository.save(transaction);
 
+        // === 3단계: JournalEntry 생성 & 저장 ===
         String description = generateDescription(request.getType(), category.getName(), request.getAmount());
         JournalEntry journalEntry = JournalEntry.builder()
                 .transaction(savedTransaction)
@@ -74,6 +79,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
         JournalEntry savedJournalEntry = journalEntryRepository.save(journalEntry);
 
+        // === 4단계: 복식부기 상세 생성 (검증 후 저장) ===
         createDoubleEntryDetails(savedJournalEntry, request.getType(), category, paymentMethod, request.getAmount());
 
         log.info("거래 생성 완료: transactionId={}", savedTransaction.getId());
@@ -92,7 +98,8 @@ public class TransactionServiceImpl implements TransactionService {
         log.debug("거래 목록 조회: userId={}, bookId={}, type={}, start={}, end={}",
                 userId, bookId, type, startDate, endDate);
 
-        validateBookAccess(userId, bookId);
+        // 권한 검증 (메서드 사용으로 통일)
+        validateAndGetBook(userId, bookId);
 
         TransactionSearchCondition condition = TransactionSearchCondition.builder()
                 .bookId(bookId)
@@ -145,6 +152,12 @@ public class TransactionServiceImpl implements TransactionService {
         log.info("거래 삭제 완료: transactionId={}", id);
     }
 
+    // ========== Private 메서드 ==========
+
+    /**
+     * 복식부기 상세 내역 생성
+     * - 검증 먼저, 저장은 나중에
+     */
     private void createDoubleEntryDetails(
             JournalEntry journalEntry,
             TransactionType type,
@@ -152,21 +165,31 @@ public class TransactionServiceImpl implements TransactionService {
             Account paymentMethod,
             BigDecimal amount) {
 
+        // 상세 내역 객체 생성 (아직 저장 안 함)
+        List<TransactionDetail> details = new ArrayList<>();
+
         if (type == TransactionType.INCOME) {
-            createDetail(journalEntry, paymentMethod, DetailType.DEBIT, amount);
-            createDetail(journalEntry, category, DetailType.CREDIT, amount);
+            // 수입: 차변(결제수단), 대변(수익)
+            details.add(createDetailObject(journalEntry, paymentMethod, DetailType.DEBIT, amount));
+            details.add(createDetailObject(journalEntry, category, DetailType.CREDIT, amount));
         } else {
-            createDetail(journalEntry, category, DetailType.DEBIT, amount);
-            createDetail(journalEntry, paymentMethod, DetailType.CREDIT, amount);
+            // 지출: 차변(비용), 대변(결제수단)
+            details.add(createDetailObject(journalEntry, category, DetailType.DEBIT, amount));
+            details.add(createDetailObject(journalEntry, paymentMethod, DetailType.CREDIT, amount));
         }
 
-        validateDoubleEntry(journalEntry);
+        // 대차평형 검증 (저장 전)
+        validateDoubleEntry(details);
+
+        // 검증 통과 후 일괄 저장
+        transactionDetailRepository.saveAll(details);
     }
 
-    private void validateDoubleEntry(JournalEntry journalEntry) {
-        List<TransactionDetail> details = transactionDetailRepository
-                .findByJournalEntryId(journalEntry.getId());
-
+    /**
+     * 대차평형 검증
+     * - 차변 합계 = 대변 합계
+     */
+    private void validateDoubleEntry(List<TransactionDetail> details) {
         BigDecimal debitSum = details.stream()
                 .map(TransactionDetail::getDebitAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -183,29 +206,37 @@ public class TransactionServiceImpl implements TransactionService {
         }
     }
 
+    /**
+     * 계정과목 타입 검증 (간결화)
+     */
     private void validateAccountTypes(
             TransactionType transactionType,
             Account category,
             Account paymentMethod) {
 
-        if (transactionType == TransactionType.INCOME) {
-            if (category.getAccountType() != AccountType.REVENUE) {
-                throw new InvalidTransactionException(
-                        "수입 거래는 수익 계정과목을 사용해야 합니다.");
-            }
-        } else {
-            if (category.getAccountType() != AccountType.EXPENSE) {
-                throw new InvalidTransactionException(
-                        "지출 거래는 비용 계정과목을 사용해야 합니다.");
-            }
+        // 예상 계정 타입
+        AccountType expectedType = (transactionType == TransactionType.INCOME)
+                ? AccountType.REVENUE
+                : AccountType.EXPENSE;
+
+        // 카테고리 타입 검증
+        if (category.getAccountType() != expectedType) {
+            throw new InvalidTransactionException(
+                    String.format("%s 거래는 %s 계정과목을 사용해야 합니다.",
+                            transactionType == TransactionType.INCOME ? "수입" : "지출",
+                            expectedType == AccountType.REVENUE ? "수익" : "비용"));
         }
 
+        // 결제수단 타입 검증
         if (paymentMethod.getAccountType() != AccountType.PAYMENT_METHOD) {
             throw new InvalidTransactionException(
                     "결제수단으로 올바른 계정과목을 선택해야 합니다.");
         }
     }
 
+    /**
+     * 장부 타입 일치 검증
+     */
     private void validateBookTypes(Book book, Account category, Account paymentMethod) {
         if (!category.getBookType().equals(book.getBookType())) {
             throw new InvalidTransactionException(
@@ -220,23 +251,27 @@ public class TransactionServiceImpl implements TransactionService {
         }
     }
 
-    private void createDetail(
+    /**
+     * TransactionDetail 객체 생성 (저장 안 함)
+     */
+    private TransactionDetail createDetailObject(
             JournalEntry journalEntry,
             Account account,
             DetailType detailType,
             BigDecimal amount) {
 
-        TransactionDetail detail = TransactionDetail.builder()
+        return TransactionDetail.builder()
                 .journalEntry(journalEntry)
                 .account(account)
                 .detailType(detailType)
                 .debitAmount(detailType == DetailType.DEBIT ? amount : BigDecimal.ZERO)
                 .creditAmount(detailType == DetailType.CREDIT ? amount : BigDecimal.ZERO)
                 .build();
-
-        transactionDetailRepository.save(detail);
     }
 
+    /**
+     * 거래 설명 생성
+     */
     private String generateDescription(TransactionType type, String categoryName, BigDecimal amount) {
         return String.format("%s - %s %s원",
                 type == TransactionType.INCOME ? "수입" : "지출",
@@ -244,12 +279,18 @@ public class TransactionServiceImpl implements TransactionService {
                 amount.toString());
     }
 
-    private void validateBookAccess(Long userId, Long bookId) {
+    /**
+     * 장부 존재 & 권한 검증 (통일된 메서드)
+     * - 기존 validateBookAccess를 개선
+     */
+    private Book validateAndGetBook(Long userId, Long bookId) {
         Book book = bookRepository.findByIdAndIsActive(bookId, true)
                 .orElseThrow(() -> new BookNotFoundException(bookId));
 
         if (!book.getUser().getId().equals(userId)) {
             throw new UnauthorizedBookAccessException(bookId);
         }
+
+        return book;
     }
 }
