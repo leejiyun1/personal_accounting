@@ -6,9 +6,11 @@ import com.personalaccount.domain.account.repository.AccountRepository;
 import com.personalaccount.domain.book.entity.Book;
 import com.personalaccount.domain.book.repository.BookRepository;
 import com.personalaccount.common.exception.custom.*;
+import com.personalaccount.domain.transaction.dto.mapper.TransactionMapper;
 import com.personalaccount.domain.transaction.dto.request.TransactionCreateRequest;
 import com.personalaccount.domain.transaction.dto.request.TransactionSearchCondition;
 import com.personalaccount.domain.transaction.dto.request.TransactionUpdateRequest;
+import com.personalaccount.domain.transaction.dto.response.TransactionDetailResponse;
 import com.personalaccount.domain.transaction.entity.*;
 import com.personalaccount.domain.transaction.repository.JournalEntryRepository;
 import com.personalaccount.domain.transaction.repository.TransactionDetailRepository;
@@ -44,7 +46,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         // === 1단계: 검증 ===
 
-        // 1-1. 장부 존재 & 권한 검증 (메서드로 통일)
+        // 1-1. 장부 존재 & 권한 검증
         Book book = validateAndGetBook(userId, request.getBookId());
 
         // 1-2. 계정과목 존재 확인
@@ -54,7 +56,7 @@ public class TransactionServiceImpl implements TransactionService {
         Account paymentMethod = accountRepository.findById(request.getPaymentMethodId())
                 .orElseThrow(() -> new AccountNotFoundException(request.getPaymentMethodId()));
 
-        // 1-3. 계정과목 타입 검증 (간결화)
+        // 1-3. 계정과목 타입 검증
         validateAccountTypes(request.getType(), category, paymentMethod);
 
         // 1-4. 장부 타입 일치 검증
@@ -79,7 +81,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
         JournalEntry savedJournalEntry = journalEntryRepository.save(journalEntry);
 
-        // === 4단계: 복식부기 상세 생성 (검증 후 저장) ===
+        // === 4단계: 복식부기 상세 생성 ===
         createDoubleEntryDetails(savedJournalEntry, request.getType(), category, paymentMethod, request.getAmount());
 
         log.info("거래 생성 완료: transactionId={}", savedTransaction.getId());
@@ -98,7 +100,6 @@ public class TransactionServiceImpl implements TransactionService {
         log.debug("거래 목록 조회: userId={}, bookId={}, type={}, start={}, end={}",
                 userId, bookId, type, startDate, endDate);
 
-        // 권한 검증 (메서드 사용으로 통일)
         validateAndGetBook(userId, bookId);
 
         TransactionSearchCondition condition = TransactionSearchCondition.builder()
@@ -123,6 +124,25 @@ public class TransactionServiceImpl implements TransactionService {
         }
 
         return transaction;
+    }
+
+    @Override
+    public TransactionDetailResponse getTransactionWithDetails(Long userId, Long id) {
+        log.debug("거래 상세 조회(복식부기 포함): userId={}, transactionId={}", userId, id);
+
+        // 1. 권한 검증
+        Transaction transaction = getTransaction(userId, id);
+
+        // 2. JournalEntry 조회
+        List<JournalEntry> journalEntries = journalEntryRepository.findByTransactionId(id);
+
+        // 3. TransactionDetail 조회
+        List<List<TransactionDetail>> detailsList = journalEntries.stream()
+                .map(je -> transactionDetailRepository.findByJournalEntryId(je.getId()))
+                .toList();
+
+        // 4. DTO 변환
+        return TransactionMapper.toDetailResponse(transaction, journalEntries, detailsList);
     }
 
     @Transactional
@@ -165,7 +185,6 @@ public class TransactionServiceImpl implements TransactionService {
             Account paymentMethod,
             BigDecimal amount) {
 
-        // 상세 내역 객체 생성 (아직 저장 안 함)
         List<TransactionDetail> details = new ArrayList<>();
 
         if (type == TransactionType.INCOME) {
@@ -207,19 +226,17 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     /**
-     * 계정과목 타입 검증 (간결화)
+     * 계정과목 타입 검증
      */
     private void validateAccountTypes(
             TransactionType transactionType,
             Account category,
             Account paymentMethod) {
 
-        // 예상 계정 타입
         AccountType expectedType = (transactionType == TransactionType.INCOME)
                 ? AccountType.REVENUE
                 : AccountType.EXPENSE;
 
-        // 카테고리 타입 검증
         if (category.getAccountType() != expectedType) {
             throw new InvalidTransactionException(
                     String.format("%s 거래는 %s 계정과목을 사용해야 합니다.",
@@ -227,7 +244,6 @@ public class TransactionServiceImpl implements TransactionService {
                             expectedType == AccountType.REVENUE ? "수익" : "비용"));
         }
 
-        // 결제수단 타입 검증
         if (paymentMethod.getAccountType() != AccountType.PAYMENT_METHOD) {
             throw new InvalidTransactionException(
                     "결제수단으로 올바른 계정과목을 선택해야 합니다.");
@@ -280,8 +296,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     /**
-     * 장부 존재 & 권한 검증 (통일된 메서드)
-     * - 기존 validateBookAccess를 개선
+     * 장부 존재 & 권한 검증
      */
     private Book validateAndGetBook(Long userId, Long bookId) {
         Book book = bookRepository.findByIdAndIsActive(bookId, true)
