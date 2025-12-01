@@ -13,6 +13,8 @@ import java.util.List;
 
 /**
  * Transaction Custom Repository 구현체
+ * - QueryDSL 사용
+ * - 동적 쿼리 처리
  */
 @Repository
 @RequiredArgsConstructor
@@ -22,6 +24,12 @@ public class TransactionRepositoryImpl implements TransactionRepositoryCustom {
     private final TransactionSpecification spec;
     private static final QTransaction transaction = QTransaction.transaction;
 
+    /**
+     * 동적 조건으로 거래 검색
+     * - Fetch Join으로 N+1 방지
+     * - null 조건은 자동 제외
+     * - 최신순 정렬 (날짜 DESC, ID DESC)
+     */
     @Override
     public List<Transaction> searchTransactions(TransactionSearchCondition condition) {
         return queryFactory
