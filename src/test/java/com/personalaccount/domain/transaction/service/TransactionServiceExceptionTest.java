@@ -2,6 +2,7 @@ package com.personalaccount.domain.transaction.service;
 
 import com.personalaccount.common.exception.custom.AccountNotFoundException;
 import com.personalaccount.common.exception.custom.BookNotFoundException;
+import com.personalaccount.common.exception.custom.InvalidTransactionException;
 import com.personalaccount.common.exception.custom.UnauthorizedBookAccessException;
 import com.personalaccount.domain.account.entity.Account;
 import com.personalaccount.domain.account.entity.AccountType;
@@ -195,7 +196,30 @@ class TransactionServiceExceptionTest {
     @Test
     @DisplayName("수입거래_비용계정사용_예외발생")
     void createTransaction_InvalidAccountType_ThrowsException() {
-        // TODO: 테스트 작성
+        // Given: 수입인데 비용 계정 사용
+        TransactionCreateRequest request = TransactionCreateRequest.builder()
+                .bookId(1L)
+                .date(LocalDate.now())
+                .type(TransactionType.INCOME)
+                .amount(new BigDecimal("100000"))
+                .categoryId(3L)
+                .paymentMethodId(2L)
+                .build();
+
+        given(bookRepository.findByIdAndIsActive(1L, true))
+                .willReturn(Optional.of(testBook));
+
+        given(accountRepository.findById(3L))
+                .willReturn(Optional.of(expenseAccount));
+
+        given(accountRepository.findById(2L))
+                .willReturn(Optional.of(paymentAccount));
+
+        // When & Then
+        assertThatThrownBy(() ->
+                transactionService.createTransaction(testUser.getId(), request))
+                .isInstanceOf(InvalidTransactionException.class)
+                .hasMessageContaining("수익 계정과목을 사용해야 합니다");
     }
 
     @Test
