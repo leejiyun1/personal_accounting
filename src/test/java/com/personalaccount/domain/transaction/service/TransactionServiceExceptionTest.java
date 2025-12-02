@@ -1,6 +1,7 @@
 package com.personalaccount.domain.transaction.service;
 
 import com.personalaccount.common.exception.custom.BookNotFoundException;
+import com.personalaccount.common.exception.custom.UnauthorizedBookAccessException;
 import com.personalaccount.domain.account.entity.Account;
 import com.personalaccount.domain.account.entity.AccountType;
 import com.personalaccount.domain.account.repository.AccountRepository;
@@ -131,7 +132,37 @@ class TransactionServiceExceptionTest {
     @Test
     @DisplayName("다른사용자_장부접근_권한없음_예외발생")
     void createTransaction_UnauthorizedAccess_ThrowsException() {
-        // TODO: 테스트 작성
+        //  Given: 다른 사용자의 장부
+        User anotherUser = User.builder()
+                .id(999L)
+                .email("another@test.com")
+                .name("다른유저")
+                .build();
+
+        Book anotherBook = Book.builder()
+                .id(1L)
+                .user(anotherUser)
+                .bookType(BookType.PERSONAL)
+                .name("다른장부")
+                .build();
+
+        TransactionCreateRequest request = TransactionCreateRequest.builder()
+                .bookId(1L)
+                .date(LocalDate.now())
+                .type(TransactionType.INCOME)
+                .amount(new BigDecimal("100000"))
+                .categoryId(1L)
+                .paymentMethodId(2L)
+                .build();
+
+        // Mock: 다른 사용자의 장부 반환
+        given(bookRepository.findByIdAndIsActive(1L, true))
+                .willReturn(Optional.of(anotherBook));
+
+        // When & Then: UnauthorizedBookAccessException 발생
+        assertThatThrownBy(() ->
+                transactionService.createTransaction(testUser.getId(), request))
+                .isInstanceOf(UnauthorizedBookAccessException.class);
     }
 
     @Test
