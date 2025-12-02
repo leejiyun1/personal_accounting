@@ -1,5 +1,6 @@
 package com.personalaccount.domain.transaction.service;
 
+import com.personalaccount.common.exception.custom.AccountNotFoundException;
 import com.personalaccount.common.exception.custom.BookNotFoundException;
 import com.personalaccount.common.exception.custom.UnauthorizedBookAccessException;
 import com.personalaccount.domain.account.entity.Account;
@@ -168,7 +169,27 @@ class TransactionServiceExceptionTest {
     @Test
     @DisplayName("존재하지않는_계정과목_예외발생")
     void createTransaction_AccountNotFound_ThrowsException() {
-        // TODO: 테스트 작성
+        // Given : 존재하지 않는 계정과목 ID
+        TransactionCreateRequest request = TransactionCreateRequest.builder()
+                .bookId(1L)
+                .date(LocalDate.now())
+                .type(TransactionType.INCOME)
+                .amount(new BigDecimal("100000"))
+                .categoryId(999L)
+                .paymentMethodId(2L)
+                .build();
+
+        // Mock: 장부는 정상, 계정과목은 없음
+        given(bookRepository.findByIdAndIsActive(1L, true))
+                .willReturn(Optional.of(testBook));
+
+        given(accountRepository.findById(999L))
+                .willReturn(Optional.empty());
+
+        // When & Then: AccountNotFoundException 발생
+        assertThatThrownBy(() ->
+                transactionService.createTransaction(testUser.getId(), request))
+                .isInstanceOf(AccountNotFoundException.class);
     }
 
     @Test
