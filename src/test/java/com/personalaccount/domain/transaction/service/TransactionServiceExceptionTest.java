@@ -1,0 +1,127 @@
+package com.personalaccount.domain.transaction.service;
+
+import com.personalaccount.domain.account.entity.Account;
+import com.personalaccount.domain.account.entity.AccountType;
+import com.personalaccount.domain.account.repository.AccountRepository;
+import com.personalaccount.domain.book.entity.Book;
+import com.personalaccount.domain.book.entity.BookType;
+import com.personalaccount.domain.book.repository.BookRepository;
+import com.personalaccount.domain.transaction.repository.JournalEntryRepository;
+import com.personalaccount.domain.transaction.repository.TransactionDetailRepository;
+import com.personalaccount.domain.transaction.repository.TransactionRepository;
+import com.personalaccount.domain.transaction.service.impl.TransactionServiceImpl;
+import com.personalaccount.domain.user.entity.User;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("TransactionService 예외 테스트")
+class TransactionServiceExceptionTest {
+
+    @Mock
+    private TransactionRepository transactionRepository;
+
+    @Mock
+    private JournalEntryRepository journalEntryRepository;
+
+    @Mock
+    private TransactionDetailRepository transactionDetailRepository;
+
+    @Mock
+    private BookRepository bookRepository;
+
+    @Mock
+    private AccountRepository accountRepository;
+
+    @InjectMocks
+    private TransactionServiceImpl transactionService;
+
+    private User testUser;
+    private Book testBook;
+    private Account revenueAccount;
+    private Account expenseAccount;
+    private Account paymentAccount;
+
+    @BeforeEach
+    void setUp() {
+        // 테스트 사용자
+        testUser = User.builder()
+                .id(1L)
+                .email("test@test.com")
+                .name("테스트유저")
+                .build();
+
+        // 테스트 장부
+        testBook = Book.builder()
+                .id(1L)
+                .user(testUser)
+                .bookType(BookType.PERSONAL)
+                .name("개인장부")
+                .build();
+
+        // 수익 계정 (급여)
+        revenueAccount = Account.builder()
+                .id(1L)
+                .code("5100")
+                .name("급여")
+                .accountType(AccountType.REVENUE)
+                .bookType(BookType.PERSONAL)
+                .build();
+
+        // 비용 계정 (식비)
+        expenseAccount = Account.builder()
+                .id(3L)
+                .code("6100")
+                .name("식비")
+                .accountType(AccountType.EXPENSE)
+                .bookType(BookType.PERSONAL)
+                .build();
+
+        // 결제수단 계정 (보통예금)
+        paymentAccount = Account.builder()
+                .id(2L)
+                .code("1010")
+                .name("보통예금")
+                .accountType(AccountType.PAYMENT_METHOD)
+                .bookType(BookType.PERSONAL)
+                .build();
+    }
+
+    // ========== 예외 테스트 ==========
+
+    @Test
+    @DisplayName("존재하지않는_장부_예외발생")
+    void createTransaction_BookNotFound_ThrowsException() {
+        // TODO: 테스트 작성
+    }
+
+    @Test
+    @DisplayName("다른사용자_장부접근_권한없음_예외발생")
+    void createTransaction_UnauthorizedAccess_ThrowsException() {
+        // TODO: 테스트 작성
+    }
+
+    @Test
+    @DisplayName("존재하지않는_계정과목_예외발생")
+    void createTransaction_AccountNotFound_ThrowsException() {
+        // TODO: 테스트 작성
+    }
+
+    @Test
+    @DisplayName("수입거래_비용계정사용_예외발생")
+    void createTransaction_InvalidAccountType_ThrowsException() {
+        // TODO: 테스트 작성
+    }
+
+    @Test
+    @DisplayName("장부타입_계정타입_불일치_예외발생")
+    void createTransaction_BookTypeMismatch_ThrowsException() {
+        // TODO: 테스트 작성
+    }
+}
