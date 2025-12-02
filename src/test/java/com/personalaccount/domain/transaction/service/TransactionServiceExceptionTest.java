@@ -1,11 +1,14 @@
 package com.personalaccount.domain.transaction.service;
 
+import com.personalaccount.common.exception.custom.BookNotFoundException;
 import com.personalaccount.domain.account.entity.Account;
 import com.personalaccount.domain.account.entity.AccountType;
 import com.personalaccount.domain.account.repository.AccountRepository;
 import com.personalaccount.domain.book.entity.Book;
 import com.personalaccount.domain.book.entity.BookType;
 import com.personalaccount.domain.book.repository.BookRepository;
+import com.personalaccount.domain.transaction.dto.request.TransactionCreateRequest;
+import com.personalaccount.domain.transaction.entity.TransactionType;
 import com.personalaccount.domain.transaction.repository.JournalEntryRepository;
 import com.personalaccount.domain.transaction.repository.TransactionDetailRepository;
 import com.personalaccount.domain.transaction.repository.TransactionRepository;
@@ -18,6 +21,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.BDDMockito.given;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -98,7 +108,24 @@ class TransactionServiceExceptionTest {
     @Test
     @DisplayName("존재하지않는_장부_예외발생")
     void createTransaction_BookNotFound_ThrowsException() {
-        // TODO: 테스트 작성
+        // Given: 존재하지 않는 bookId
+        TransactionCreateRequest request = TransactionCreateRequest.builder()
+                .bookId(999L)
+                .date(LocalDate.now())
+                .type(TransactionType.INCOME)
+                .amount(new BigDecimal("100000"))
+                .categoryId(1L)
+                .paymentMethodId(2L)
+                .build();
+
+        // Mock: empty 반환
+        given(bookRepository.findByIdAndIsActive(999L, true))
+                .willReturn(Optional.empty());
+
+        // When & Then: 예외 발생 확인
+        assertThatThrownBy(() ->
+                transactionService.createTransaction(testUser.getId(), request))
+                .isInstanceOf(BookNotFoundException.class);
     }
 
     @Test
