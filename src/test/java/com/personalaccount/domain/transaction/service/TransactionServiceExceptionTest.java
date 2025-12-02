@@ -225,6 +225,38 @@ class TransactionServiceExceptionTest {
     @Test
     @DisplayName("장부타입_계정타입_불일치_예외발생")
     void createTransaction_BookTypeMismatch_ThrowsException() {
-        // TODO: 테스트 작성
+        // Given: 개인 장부인데 사업자 계정 사용
+        Account businessAccount = Account.builder()
+                .id(99L)
+                .code("7100")
+                .name("사업자수익")
+                .accountType(AccountType.REVENUE)
+                .bookType(BookType.BUSINESS)  // 사업자 계정
+                .build();
+
+        TransactionCreateRequest request = TransactionCreateRequest.builder()
+                .bookId(1L)  // PERSONAL 장부
+                .date(LocalDate.now())
+                .type(TransactionType.INCOME)
+                .amount(new BigDecimal("100000"))
+                .categoryId(99L)  // BUSINESS 계정
+                .paymentMethodId(2L)
+                .build();
+
+        given(bookRepository.findByIdAndIsActive(1L, true))
+                .willReturn(Optional.of(testBook));  // PERSONAL
+
+        given(accountRepository.findById(99L))
+                .willReturn(Optional.of(businessAccount));  // BUSINESS
+
+        given(accountRepository.findById(2L))
+                .willReturn(Optional.of(paymentAccount));
+
+        // When & Then
+        assertThatThrownBy(() ->
+                transactionService.createTransaction(testUser.getId(), request))
+                .isInstanceOf(InvalidTransactionException.class)
+                .hasMessageContaining("장부 타입")
+                .hasMessageContaining("일치하지 않습니다");
     }
 }
