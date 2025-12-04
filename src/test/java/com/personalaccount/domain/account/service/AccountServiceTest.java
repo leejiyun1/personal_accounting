@@ -166,5 +166,26 @@ class AccountServiceTest {
 
     @Test
     @DisplayName("비활성화_계정_필터링_검증")
-    void getAccounts_FilterInactive() {}
+    void getAccounts_FilterInactive() {
+        // Given: 활성화된 계정만 반환 (비활성화 계정 제외)
+        Account inactiveAccount = Account.builder()
+                .id(99L)
+                .code("9999")
+                .name("비활성화계정")
+                .accountType(AccountType.REVENUE)
+                .bookType(BookType.PERSONAL)
+                .isActive(false)  // 비활성화
+                .build();
+
+        given(accountRepository.findByBookTypeAndIsActive(BookType.PERSONAL, true))
+                .willReturn(List.of(revenueAccount, expenseAccount, paymentAccount));
+
+        // When: 전체 계정과목 조회
+        List<Account> result = accountService.getAllAccounts(BookType.PERSONAL);
+
+        // Then: 활성화된 계정만 포함, 비활성화 계정 미포함
+        assertThat(result).hasSize(3);
+        assertThat(result).doesNotContain(inactiveAccount);
+        assertThat(result).allMatch(Account::getIsActive);
+    }
 }
