@@ -79,8 +79,8 @@ class AccountServiceTest {
 
         // Then: 결과 검증
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getAccountType()).isEqualTo(AccountType.REVENUE);
-        assertThat(result.get(0).getName()).isEqualTo("급여");
+        assertThat(result.getFirst().getAccountType()).isEqualTo(AccountType.REVENUE);
+        assertThat(result.getFirst().getName()).isEqualTo("급여");
     }
 
     @Test
@@ -96,8 +96,8 @@ class AccountServiceTest {
 
         // Then: 결과 검증
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getAccountType()).isEqualTo(AccountType.EXPENSE);
-        assertThat(result.get(0).getName()).isEqualTo("식비");
+        assertThat(result.getFirst().getAccountType()).isEqualTo(AccountType.EXPENSE);
+        assertThat(result.getFirst().getName()).isEqualTo("식비");
     }
 
     @Test
@@ -119,7 +119,18 @@ class AccountServiceTest {
 
     @Test
     @DisplayName("전체_계정과목_조회_성공")
-    void getAllAccounts_Success() {}
+    void getAllAccounts_Success() {
+        // Given: 모든 타입의 계정 반환 Mock
+        given(accountRepository.findByBookTypeAndIsActive(BookType.PERSONAL, true))
+                .willReturn(List.of(revenueAccount, expenseAccount, paymentAccount));
+
+        // When: 전체 계정과목 조회
+        List<Account> result = accountService.getAllAccounts(BookType.PERSONAL);
+
+        // Then: 결과 검증
+        assertThat(result).hasSize(3);
+        assertThat(result).containsExactly(revenueAccount, expenseAccount, paymentAccount);
+    }
 
     @Test
     @DisplayName("ID로_계정과목_조회_성공")
