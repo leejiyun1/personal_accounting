@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.BDDMockito.given;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -134,7 +135,20 @@ class AccountServiceTest {
 
     @Test
     @DisplayName("ID로_계정과목_조회_성공")
-    void getAccountById_Success() {}
+    void getAccountById_Success() {
+        // Given: ID로 계정 조회 Mock
+        given(accountRepository.findById(1L))
+                .willReturn(Optional.of(revenueAccount));
+
+        // When: ID로 계정과목 조회
+        Account result = accountService.getAccountById(1L);
+
+        // Then: 결과 검증
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(1L);
+        assertThat(result.getName()).isEqualTo("급여");
+        assertThat(result.getAccountType()).isEqualTo(AccountType.REVENUE);
+    }
 
     @Test
     @DisplayName("존재하지않는_ID_조회_예외발생")
