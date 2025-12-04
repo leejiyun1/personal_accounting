@@ -102,7 +102,20 @@ class AccountServiceTest {
 
     @Test
     @DisplayName("결제수단_조회_성공")
-    void getPaymentMethods_Success() {}
+    void getPaymentMethods_Success() {
+        // Given: PAYMENT_METHOD 타입 계정 반환 Mock
+        given(accountRepository.findByBookTypeAndAccountTypeAndIsActive(
+                BookType.PERSONAL, AccountType.PAYMENT_METHOD, true))
+                .willReturn(List.of(paymentAccount));
+
+        // When: 결제수단 조회
+        List<Account> result = accountService.getPaymentMethods(BookType.PERSONAL);
+
+        // Then: 결과 검증
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getAccountType()).isEqualTo(AccountType.PAYMENT_METHOD);
+        assertThat(result.getFirst().getName()).isEqualTo("보통예금");
+    }
 
     @Test
     @DisplayName("전체_계정과목_조회_성공")
