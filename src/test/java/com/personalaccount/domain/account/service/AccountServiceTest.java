@@ -1,5 +1,6 @@
 package com.personalaccount.domain.account.service;
 
+import com.personalaccount.common.exception.custom.AccountNotFoundException;
 import com.personalaccount.domain.account.entity.Account;
 import com.personalaccount.domain.account.entity.AccountType;
 import com.personalaccount.domain.account.repository.AccountRepository;
@@ -16,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -152,7 +154,15 @@ class AccountServiceTest {
 
     @Test
     @DisplayName("존재하지않는_ID_조회_예외발생")
-    void getAccountById_NotFound_ThrowsException() {}
+    void getAccountById_NotFound_ThrowsException() {
+        // Given: 존재하지 않는 ID
+        given(accountRepository.findById(999L))
+                .willReturn(Optional.empty());
+
+        // When & Then: AccountNotFoundException 발생
+        assertThatThrownBy(() -> accountService.getAccountById(999L))
+                .isInstanceOf(AccountNotFoundException.class);
+    }
 
     @Test
     @DisplayName("비활성화_계정_필터링_검증")
