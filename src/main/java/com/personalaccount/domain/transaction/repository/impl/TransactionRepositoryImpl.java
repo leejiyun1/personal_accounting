@@ -11,11 +11,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-/**
- * Transaction Custom Repository 구현체
- * - QueryDSL 사용
- * - 동적 쿼리 처리
- */
 @Repository
 @RequiredArgsConstructor
 public class TransactionRepositoryImpl implements TransactionRepositoryCustom {

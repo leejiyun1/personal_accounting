@@ -18,10 +18,6 @@ public interface TransactionService {
      */
     Transaction createTransaction(Long userId, TransactionCreateRequest request);
 
-    /**
-     * 거래 목록 조회
-     * - 필터링: 타입(수입/지출), 기간
-     */
     List<Transaction> getTransactions(
             Long userId,
             Long bookId,
@@ -30,24 +26,11 @@ public interface TransactionService {
             LocalDate endDate
     );
 
-    /**
-     * 거래 단건 조회
-     */
     Transaction getTransaction(Long userId, Long id);
 
-    /**
-     * 거래 상세 조회 (복식부기 포함)
-     * - Transaction + JournalEntry + TransactionDetail
-     */
     TransactionDetailResponse getTransactionWithDetails(Long userId, Long id);
 
-    /**
-     * 거래 수정 (메모만)
-     */
     Transaction updateTransaction(Long userId, Long id, TransactionUpdateRequest request);
 
-    /**
-     * 거래 삭제 (Soft Delete)
-     */
     void deleteTransaction(Long userId, Long id);
 }

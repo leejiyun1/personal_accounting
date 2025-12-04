@@ -22,11 +22,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * 거래 관련 API
- * - 거래 생성/조회/수정/삭제
- * - 복식부기 자동 처리
- */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/transactions")
@@ -35,10 +30,6 @@ public class TransactionController {
 
     private final TransactionService transactionService;
 
-    /**
-     * 거래 생성
-     * POST /api/v1/transactions
-     */
     @PostMapping
     public ResponseEntity<CommonResponse<TransactionResponse>> createTransaction(
             @AuthenticationPrincipal Long userId,
@@ -54,10 +45,6 @@ public class TransactionController {
                 .body(ResponseFactory.success(response, "거래 생성 완료"));
     }
 
-    /**
-     * 거래 목록 조회
-     * GET /api/v1/transactions?bookId=1&type=INCOME&startDate=2024-01-01&endDate=2024-12-31
-     */
     @GetMapping
     public ResponseEntity<CommonResponse<List<TransactionResponse>>> getTransactions(
             @AuthenticationPrincipal Long userId,
@@ -79,10 +66,6 @@ public class TransactionController {
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
 
-    /**
-     * 거래 단건 조회
-     * GET /api/v1/transactions/{id}
-     */
     @GetMapping("/{id}")
     public ResponseEntity<CommonResponse<TransactionResponse>> getTransaction(
             @AuthenticationPrincipal Long userId,
@@ -96,11 +79,6 @@ public class TransactionController {
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
 
-    /**
-     * 거래 상세 조회 (복식부기 포함)
-     * GET /api/v1/transactions/{id}/details
-     * - Transaction + JournalEntry + TransactionDetail
-     */
     @GetMapping("/{id}/details")
     public ResponseEntity<CommonResponse<TransactionDetailResponse>> getTransactionDetails(
             @AuthenticationPrincipal Long userId,
@@ -113,10 +91,6 @@ public class TransactionController {
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
 
-    /**
-     * 거래 수정 (메모만)
-     * PUT /api/v1/transactions/{id}
-     */
     @PutMapping("/{id}")
     public ResponseEntity<CommonResponse<TransactionResponse>> updateTransaction(
             @AuthenticationPrincipal Long userId,
@@ -131,10 +105,6 @@ public class TransactionController {
         return ResponseEntity.ok(ResponseFactory.success(response, "거래 수정 완료"));
     }
 
-    /**
-     * 거래 삭제 (Soft Delete)
-     * DELETE /api/v1/transactions/{id}
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<CommonResponse<Void>> deleteTransaction(
             @AuthenticationPrincipal Long userId,

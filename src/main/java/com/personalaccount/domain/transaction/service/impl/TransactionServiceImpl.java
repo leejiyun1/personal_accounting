@@ -44,25 +44,17 @@ public class TransactionServiceImpl implements TransactionService {
         log.info("거래 생성 요청: userId={}, bookId={}, type={}, amount={}",
                 userId, request.getBookId(), request.getType(), request.getAmount());
 
-        // === 1단계: 검증 ===
-
-        // 1-1. 장부 존재 & 권한 검증
         Book book = validateAndGetBook(userId, request.getBookId());
 
-        // 1-2. 계정과목 존재 확인
         Account category = accountRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new AccountNotFoundException(request.getCategoryId()));
 
         Account paymentMethod = accountRepository.findById(request.getPaymentMethodId())
                 .orElseThrow(() -> new AccountNotFoundException(request.getPaymentMethodId()));
 
-        // 1-3. 계정과목 타입 검증
         validateAccountTypes(request.getType(), category, paymentMethod);
-
-        // 1-4. 장부 타입 일치 검증
         validateBookTypes(book, category, paymentMethod);
 
-        // === 2단계: Transaction 생성 & 저장 ===
         Transaction transaction = Transaction.builder()
                 .book(book)
                 .date(request.getDate())
@@ -72,7 +64,6 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
         Transaction savedTransaction = transactionRepository.save(transaction);
 
-        // === 3단계: JournalEntry 생성 & 저장 ===
         String description = generateDescription(request.getType(), category.getName(), request.getAmount());
         JournalEntry journalEntry = JournalEntry.builder()
                 .transaction(savedTransaction)
@@ -81,7 +72,6 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
         JournalEntry savedJournalEntry = journalEntryRepository.save(journalEntry);
 
-        // === 4단계: 복식부기 상세 생성 ===
         createDoubleEntryDetails(savedJournalEntry, request.getType(), category, paymentMethod, request.getAmount());
 
         log.info("거래 생성 완료: transactionId={}", savedTransaction.getId());
@@ -130,18 +120,14 @@ public class TransactionServiceImpl implements TransactionService {
     public TransactionDetailResponse getTransactionWithDetails(Long userId, Long id) {
         log.debug("거래 상세 조회(복식부기 포함): userId={}, transactionId={}", userId, id);
 
-        // 1. 권한 검증
         Transaction transaction = getTransaction(userId, id);
 
-        // 2. JournalEntry 조회
         List<JournalEntry> journalEntries = journalEntryRepository.findByTransactionId(id);
 
-        // 3. TransactionDetail 조회
         List<List<TransactionDetail>> detailsList = journalEntries.stream()
                 .map(je -> transactionDetailRepository.findByJournalEntryId(je.getId()))
                 .toList();
 
-        // 4. DTO 변환
         return TransactionMapper.toDetailResponse(transaction, journalEntries, detailsList);
     }
 
@@ -172,11 +158,10 @@ public class TransactionServiceImpl implements TransactionService {
         log.info("거래 삭제 완료: transactionId={}", id);
     }
 
-    // ========== Private 메서드 ==========
-
     /**
      * 복식부기 상세 내역 생성
-     * - 검증 먼저, 저장은 나중에
+     * 수입: 차변(결제수단) = 대변(수익)
+     * 지출: 차변(비용) = 대변(결제수단)
      */
     private void createDoubleEntryDetails(
             JournalEntry journalEntry,
@@ -188,25 +173,20 @@ public class TransactionServiceImpl implements TransactionService {
         List<TransactionDetail> details = new ArrayList<>();
 
         if (type == TransactionType.INCOME) {
-            // 수입: 차변(결제수단), 대변(수익)
             details.add(createDetailObject(journalEntry, paymentMethod, DetailType.DEBIT, amount));
             details.add(createDetailObject(journalEntry, category, DetailType.CREDIT, amount));
         } else {
-            // 지출: 차변(비용), 대변(결제수단)
             details.add(createDetailObject(journalEntry, category, DetailType.DEBIT, amount));
             details.add(createDetailObject(journalEntry, paymentMethod, DetailType.CREDIT, amount));
         }
 
-        // 대차평형 검증 (저장 전)
         validateDoubleEntry(details);
-
-        // 검증 통과 후 일괄 저장
         transactionDetailRepository.saveAll(details);
     }
 
     /**
      * 대차평형 검증
-     * - 차변 합계 = 대변 합계
+     * 복식부기 원칙: 차변 합계 = 대변 합계
      */
     private void validateDoubleEntry(List<TransactionDetail> details) {
         BigDecimal debitSum = details.stream()
@@ -227,6 +207,8 @@ public class TransactionServiceImpl implements TransactionService {
 
     /**
      * 계정과목 타입 검증
+     * 수입 거래 → 수익 계정
+     * 지출 거래 → 비용 계정
      */
     private void validateAccountTypes(
             TransactionType transactionType,
@@ -252,6 +234,8 @@ public class TransactionServiceImpl implements TransactionService {
 
     /**
      * 장부 타입 일치 검증
+     * 개인 장부 → 개인 계정만
+     * 사업 장부 → 사업 계정만
      */
     private void validateBookTypes(Book book, Account category, Account paymentMethod) {
         if (!category.getBookType().equals(book.getBookType())) {
@@ -267,9 +251,6 @@ public class TransactionServiceImpl implements TransactionService {
         }
     }
 
-    /**
-     * TransactionDetail 객체 생성 (저장 안 함)
-     */
     private TransactionDetail createDetailObject(
             JournalEntry journalEntry,
             Account account,
@@ -285,9 +266,6 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
     }
 
-    /**
-     * 거래 설명 생성
-     */
     private String generateDescription(TransactionType type, String categoryName, BigDecimal amount) {
         return String.format("%s - %s %s원",
                 type == TransactionType.INCOME ? "수입" : "지출",
@@ -295,9 +273,6 @@ public class TransactionServiceImpl implements TransactionService {
                 amount.toString());
     }
 
-    /**
-     * 장부 존재 & 권한 검증
-     */
     private Book validateAndGetBook(Long userId, Long bookId) {
         Book book = bookRepository.findByIdAndIsActive(bookId, true)
                 .orElseThrow(() -> new BookNotFoundException(bookId));

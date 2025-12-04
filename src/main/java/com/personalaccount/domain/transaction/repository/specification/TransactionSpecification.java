@@ -20,23 +20,14 @@ public class TransactionSpecification {
 
     private static final QTransaction transaction = QTransaction.transaction;
 
-    /**
-     * 장부 ID 일치
-     */
     public BooleanExpression bookIdEq(Long bookId) {
         return bookId != null ? transaction.book.id.eq(bookId) : null;
     }
 
-    /**
-     * 거래 타입 일치 (INCOME/EXPENSE)
-     */
     public BooleanExpression typeEq(TransactionType type) {
         return type != null ? transaction.type.eq(type) : null;
     }
 
-    /**
-     * 날짜 범위 검색
-     */
     public BooleanExpression dateBetween(LocalDate startDate, LocalDate endDate) {
         if (startDate == null || endDate == null) {
             return null;
@@ -44,16 +35,10 @@ public class TransactionSpecification {
         return transaction.date.between(startDate, endDate);
     }
 
-    /**
-     * 활성화된 거래만 조회
-     */
     public BooleanExpression isActive() {
         return transaction.isActive.isTrue();
     }
 
-    /**
-     * 메모 키워드 검색 (대소문자 무시)
-     */
     public BooleanExpression memoContains(String keyword) {
         return keyword != null && !keyword.isBlank()
                 ? transaction.memo.containsIgnoreCase(keyword)

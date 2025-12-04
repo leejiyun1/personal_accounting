@@ -8,18 +8,10 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
-/**
- * Transaction Repository
- * - 기본 CRUD (JpaRepository)
- * - 복잡한 검색 쿼리 (TransactionRepositoryCustom)
- */
 @Repository
 public interface TransactionRepository
         extends JpaRepository<Transaction, Long>, TransactionRepositoryCustom {
 
-    /**
-     * Soft Delete 조회
-     */
     Optional<Transaction> findByIdAndIsActive(Long id, Boolean isActive);
 
     /**
