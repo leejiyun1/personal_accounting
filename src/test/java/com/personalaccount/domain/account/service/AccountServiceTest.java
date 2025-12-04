@@ -13,6 +13,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
+
+import static org.mockito.BDDMockito.given;
+import static org.assertj.core.api.Assertions.assertThat;
+
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AccountService 테스트")
 class AccountServiceTest {
@@ -63,7 +68,20 @@ class AccountServiceTest {
 
     @Test
     @DisplayName("수입_카테고리_조회_성공")
-    void getIncomeCategories_Success() {}
+    void getIncomeCategories_Success() {
+        // Given: REVENUE 타입 계정 반환 Mock
+        given(accountRepository.findByBookTypeAndAccountTypeAndIsActive(
+                BookType.PERSONAL, AccountType.REVENUE, true))
+                .willReturn(List.of(revenueAccount));
+
+        // When: 수입 카테고리 조회
+        List<Account> result = accountService.getIncomeCategories(BookType.PERSONAL);
+
+        // Then: 결과 검증
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getAccountType()).isEqualTo(AccountType.REVENUE);
+        assertThat(result.get(0).getName()).isEqualTo("급여");
+    }
 
     @Test
     @DisplayName("지출_카테고리_조회_성공")
