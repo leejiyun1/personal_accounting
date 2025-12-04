@@ -85,7 +85,20 @@ class AccountServiceTest {
 
     @Test
     @DisplayName("지출_카테고리_조회_성공")
-    void getExpenseCategories_Success() {}
+    void getExpenseCategories_Success() {
+        // Given: EXPENSE 타입 계정 반환 Mock
+        given(accountRepository.findByBookTypeAndAccountTypeAndIsActive(
+                BookType.PERSONAL, AccountType.EXPENSE, true))
+                .willReturn(List.of(expenseAccount));
+
+        // When: 지출 카테고리 조회
+        List<Account> result = accountService.getExpenseCategories(BookType.PERSONAL);
+
+        // Then: 결과 검증
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getAccountType()).isEqualTo(AccountType.EXPENSE);
+        assertThat(result.get(0).getName()).isEqualTo("식비");
+    }
 
     @Test
     @DisplayName("결제수단_조회_성공")
