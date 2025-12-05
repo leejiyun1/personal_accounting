@@ -33,13 +33,9 @@ public class BookController {
     ) {
         log.info("장부 생성 API 호출: userId={}, bookType={}", userId, request.getBookType());
 
-        // 1. Service 호출
         Book book = bookService.createBook(userId, request);
-
-        // 2. Entity → DTO 변환
         BookResponse response = BookMapper.toResponse(book);
 
-        // 3. CommonResponse로 감싸서 반환
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ResponseFactory.success(response, "장부 생성 완료"));
@@ -51,18 +47,12 @@ public class BookController {
     ) {
         log.info("장부 목록 조회 API 호출: userId={}", userId);
 
-        // 1. Service 호출
         List<Book> books = bookService.getBooksByUserId(userId);
-
-        // 2. Entity List → DTO List 변환
         List<BookResponse> response = books.stream()
                 .map(BookMapper::toResponse)
                 .toList();
 
-        // 3. CommonResponse로 감싸서 반환
-        return ResponseEntity.ok(
-                ResponseFactory.success(response)
-        );
+        return ResponseEntity.ok(ResponseFactory.success(response));
     }
 
     @GetMapping("/{id}")
@@ -72,16 +62,10 @@ public class BookController {
     ) {
         log.info("장부 조회 API 호출: bookId={}, userId={}", id, userId);
 
-        // 1. Service 호출
         Book book = bookService.getBook(id, userId);
-
-        // 2. Entity → DTO 변환
         BookResponse response = BookMapper.toResponse(book);
 
-        // 3. CommonResponse로 감싸서 반환
-        return ResponseEntity.ok(
-                ResponseFactory.success(response)
-        );
+        return ResponseEntity.ok(ResponseFactory.success(response));
     }
 
     @PutMapping("/{id}")
@@ -92,18 +76,11 @@ public class BookController {
     ) {
         log.info("장부 수정 API 호출: bookId={}, userId={}", id, userId);
 
-        // 1. Service 호출
         Book book = bookService.updateBook(id, userId, request);
-
-        // 2. Entity → DTO 변환
         BookResponse response = BookMapper.toResponse(book);
 
-        // 3. CommonResponse로 감싸서 반환
-        return ResponseEntity.ok(
-                ResponseFactory.success(response, "장부 수정 완료")
-        );
+        return ResponseEntity.ok(ResponseFactory.success(response, "장부 수정 완료"));
     }
-
 
     @DeleteMapping("/{id}")
     public ResponseEntity<CommonResponse<Void>> deleteBook(
@@ -112,12 +89,8 @@ public class BookController {
     ) {
         log.info("장부 삭제 API 호출: bookId={}, userId={}", id, userId);
 
-        // 1. Service 호출
         bookService.deleteBook(id, userId);
 
-        // 2. 성공 응답
-        return ResponseEntity.ok(
-                ResponseFactory.successWithMessage("장부 삭제 완료")
-        );
+        return ResponseEntity.ok(ResponseFactory.successWithMessage("장부 삭제 완료"));
     }
 }

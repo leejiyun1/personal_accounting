@@ -53,7 +53,6 @@ public class BookServiceImpl implements BookService {
         Book book = BookMapper.toEntity(request, user);
         Book savedBook = bookRepository.save(book);
 
-        // 기본 계정과목 생성
         createDefaultAccounts(savedBook);
 
         log.info("장부 생성 완료: bookId={}, 기본 계정과목 생성 완료", savedBook.getId());
