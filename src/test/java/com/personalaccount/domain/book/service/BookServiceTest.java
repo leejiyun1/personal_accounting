@@ -1,5 +1,6 @@
 package com.personalaccount.domain.book.service;
 
+import com.personalaccount.common.exception.custom.DuplicateBookTypeException;
 import com.personalaccount.common.exception.custom.UserNotFoundException;
 import com.personalaccount.domain.account.repository.AccountRepository;
 import com.personalaccount.domain.book.dto.request.BookCreateRequest;
@@ -132,8 +133,18 @@ class BookServiceTest {
     @DisplayName("장부생성_중복BookType_예외발생")
     void createBook_DuplicateBookType_ThrowsException() {
         // Given
+        Long userId = 1L;
+
+        given(userRepository.existsById(userId)).willReturn(true);
+        given(bookRepository.findByUserIdAndBookTypeAndIsActive(userId, BookType.PERSONAL, true))
+                .willReturn(Optional.of(testBook));
 
         // When & Then
+        assertThatThrownBy(() -> bookService.createBook(userId, createRequest))
+                .isInstanceOf(DuplicateBookTypeException.class);
+
+        verify(userRepository).existsById(userId);
+        verify(bookRepository).findByUserIdAndBookTypeAndIsActive(userId, BookType.PERSONAL, true);
     }
 
     @Test
