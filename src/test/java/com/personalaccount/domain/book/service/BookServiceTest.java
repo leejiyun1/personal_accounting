@@ -1,0 +1,153 @@
+package com.personalaccount.domain.book.service;
+
+import com.personalaccount.domain.account.repository.AccountRepository;
+import com.personalaccount.domain.book.dto.request.BookCreateRequest;
+import com.personalaccount.domain.book.entity.Book;
+import com.personalaccount.domain.book.entity.BookType;
+import com.personalaccount.domain.book.repository.BookRepository;
+import com.personalaccount.domain.book.service.impl.BookServiceImpl;
+import com.personalaccount.domain.user.entity.User;
+import com.personalaccount.domain.user.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("BookService 테스트")
+class BookServiceTest {
+
+    @Mock
+    private BookRepository bookRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private AccountRepository accountRepository;
+
+    @InjectMocks
+    private BookServiceImpl bookService;
+
+    private User testUser;
+    private Book testBook;
+    private BookCreateRequest createRequest;
+
+    @BeforeEach
+    void setUp() {
+        testUser = User.builder()
+                .id(1L)
+                .email("test@test.com")
+                .name("테스트")
+                .password("password")
+                .build();
+
+        testBook = Book.builder()
+                .id(1L)
+                .name("내 장부")
+                .bookType(BookType.PERSONAL)
+                .user(testUser)
+                .isActive(true)
+                .build();
+
+        createRequest = BookCreateRequest.builder()
+                .name("내 장부")
+                .bookType(BookType.PERSONAL)
+                .build();
+    }
+
+    @Test
+    @DisplayName("장부생성_성공")
+    void createBook_Success() {
+        // Given
+
+        // When
+
+        // Then
+    }
+
+    @Test
+    @DisplayName("장부생성_기본계정과목_자동생성_확인")
+    void createBook_DefaultAccounts_Created() {
+        // Given
+
+        // When
+
+        // Then
+    }
+
+    @Test
+    @DisplayName("장부생성_사용자없음_예외발생")
+    void createBook_UserNotFound_ThrowsException() {
+        // Given
+
+        // When & Then
+    }
+
+    @Test
+    @DisplayName("장부생성_중복BookType_예외발생")
+    void createBook_DuplicateBookType_ThrowsException() {
+        // Given
+
+        // When & Then
+    }
+
+    @Test
+    @DisplayName("장부목록조회_성공")
+    void getBooksByUserId_Success() {
+        // Given
+
+        // When
+
+        // Then
+    }
+
+    @Test
+    @DisplayName("장부단건조회_성공")
+    void getBook_Success() {
+        // Given
+
+        // When
+
+        // Then
+    }
+
+    @Test
+    @DisplayName("장부단건조회_장부없음_예외발생")
+    void getBook_NotFound_ThrowsException() {
+        // Given
+
+        // When & Then
+    }
+
+    @Test
+    @DisplayName("장부단건조회_권한없음_예외발생")
+    void getBook_Unauthorized_ThrowsException() {
+        // Given
+
+        // When & Then
+    }
+
+    @Test
+    @DisplayName("장부수정_성공")
+    void updateBook_Success() {
+        // Given
+
+        // When
+
+        // Then
+    }
+
+    @Test
+    @DisplayName("장부삭제_SoftDelete_성공")
+    void deleteBook_Success() {
+        // Given
+
+        // When
+
+        // Then
+    }
+}
