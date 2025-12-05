@@ -16,6 +16,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Optional;
+
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+
 @ExtendWith(MockitoExtension.class)
 @DisplayName("BookService 테스트")
 class BookServiceTest {
@@ -63,10 +70,25 @@ class BookServiceTest {
     @DisplayName("장부생성_성공")
     void createBook_Success() {
         // Given
+        Long userId = 1L;
+
+        given(userRepository.existsById(userId)).willReturn(true);
+        given(bookRepository.findByUserIdAndBookTypeAndIsActive(userId, BookType.PERSONAL, true))
+                .willReturn(Optional.empty());
+        given(userRepository.getReferenceById(userId)).willReturn(testUser);
+        given(bookRepository.save(any(Book.class))).willReturn(testBook);
 
         // When
+        Book result = bookService.createBook(userId, createRequest);
 
         // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getName()).isEqualTo("내 장부");
+        assertThat(result.getBookType()).isEqualTo(BookType.PERSONAL);
+        assertThat(result.getUser().getId()).isEqualTo(userId);
+
+        verify(userRepository).existsById(userId);
+        verify(bookRepository).save(any(Book.class));
     }
 
     @Test
