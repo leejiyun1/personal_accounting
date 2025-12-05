@@ -1,5 +1,6 @@
 package com.personalaccount.domain.book.service;
 
+import com.personalaccount.common.exception.custom.UserNotFoundException;
 import com.personalaccount.domain.account.repository.AccountRepository;
 import com.personalaccount.domain.book.dto.request.BookCreateRequest;
 import com.personalaccount.domain.book.entity.Book;
@@ -19,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
@@ -115,8 +117,15 @@ class BookServiceTest {
     @DisplayName("장부생성_사용자없음_예외발생")
     void createBook_UserNotFound_ThrowsException() {
         // Given
+        Long userId = 999L;
+
+        given(userRepository.existsById(userId)).willReturn(false);
 
         // When & Then
+        assertThatThrownBy(() -> bookService.createBook(userId, createRequest))
+                .isInstanceOf(UserNotFoundException.class);
+
+        verify(userRepository).existsById(userId);
     }
 
     @Test
