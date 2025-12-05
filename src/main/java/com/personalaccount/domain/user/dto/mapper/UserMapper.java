@@ -28,7 +28,7 @@ public class UserMapper {
 
         return User.builder()
                 .email(request.getEmail())
-                .password(request.getPassword())  // 평문 (Service에서 암호화 필요)
+                .password(request.getPassword())
                 .name(request.getName())
                 .build();
     }

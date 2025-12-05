@@ -23,25 +23,17 @@ public class UserController {
 
     private final UserService userService;
 
-
     @GetMapping("/{id}")
     public ResponseEntity<CommonResponse<UserResponse>> getUser(
             @PathVariable Long id
     ) {
         log.info("사용자 조회 API 호출: id={}", id);
 
-        // 1. Service 호출
         User user = userService.getUser(id);
-
-        // 2. Entity → DTO 변환
         UserResponse response = UserMapper.toResponse(user);
 
-        // 3. CommonResponse로 감싸서 반환
-        return ResponseEntity.ok(
-                ResponseFactory.success(response)
-        );
+        return ResponseEntity.ok(ResponseFactory.success(response));
     }
-
 
     @PostMapping
     public ResponseEntity<CommonResponse<UserResponse>> createUser(
@@ -49,18 +41,13 @@ public class UserController {
     ) {
         log.info("회원가입 API 호출: email={}", request.getEmail());
 
-        // 1. Service 호출
         User user = userService.createUser(request);
-
-        // 2. Entity → DTO 변환
         UserResponse response = UserMapper.toResponse(user);
 
-        // 3. CommonResponse로 감싸서 반환 (201 Created)
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ResponseFactory.success(response, "회원가입 성공"));
     }
-
 
     @PutMapping("/{id}")
     public ResponseEntity<CommonResponse<UserResponse>> updateUser(
@@ -69,18 +56,11 @@ public class UserController {
     ) {
         log.info("사용자 수정 API 호출: id={}", id);
 
-        // 1. Service 호출
         User user = userService.updateUser(id, request);
-
-        // 2. Entity → DTO 변환
         UserResponse response = UserMapper.toResponse(user);
 
-        // 3. CommonResponse로 감싸서 반환
-        return ResponseEntity.ok(
-                ResponseFactory.success(response, "사용자 수정 완료")
-        );
+        return ResponseEntity.ok(ResponseFactory.success(response, "사용자 수정 완료"));
     }
-
 
     @DeleteMapping("/{id}")
     public ResponseEntity<CommonResponse<Void>> deleteUser(
@@ -88,12 +68,8 @@ public class UserController {
     ) {
         log.info("사용자 삭제 API 호출: id={}", id);
 
-        // 1. Service 호출
         userService.deleteUser(id);
 
-        // 2. 성공 응답 (데이터 없음)
-        return ResponseEntity.ok(
-                ResponseFactory.successWithMessage("사용자 삭제 완료")
-        );
+        return ResponseEntity.ok(ResponseFactory.successWithMessage("사용자 삭제 완료"));
     }
 }
