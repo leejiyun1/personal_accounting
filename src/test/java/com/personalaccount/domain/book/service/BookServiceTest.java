@@ -1,5 +1,6 @@
 package com.personalaccount.domain.book.service;
 
+import com.personalaccount.common.exception.custom.BookNotFoundException;
 import com.personalaccount.common.exception.custom.DuplicateBookTypeException;
 import com.personalaccount.common.exception.custom.UserNotFoundException;
 import com.personalaccount.domain.account.repository.AccountRepository;
@@ -192,8 +193,16 @@ class BookServiceTest {
     @DisplayName("장부단건조회_장부없음_예외발생")
     void getBook_NotFound_ThrowsException() {
         // Given
+        Long bookId = 999L;
+        Long userId = 1L;
+
+        given(bookRepository.findByIdAndIsActive(bookId, true)).willReturn(Optional.empty());
 
         // When & Then
+        assertThatThrownBy(() -> bookService.getBook(bookId, userId))
+                .isInstanceOf(BookNotFoundException.class);
+
+        verify(bookRepository).findByIdAndIsActive(bookId, true);
     }
 
     @Test
