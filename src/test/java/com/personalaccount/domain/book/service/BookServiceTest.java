@@ -6,6 +6,7 @@ import com.personalaccount.common.exception.custom.UnauthorizedBookAccessExcepti
 import com.personalaccount.common.exception.custom.UserNotFoundException;
 import com.personalaccount.domain.account.repository.AccountRepository;
 import com.personalaccount.domain.book.dto.request.BookCreateRequest;
+import com.personalaccount.domain.book.dto.request.BookUpdateRequest;
 import com.personalaccount.domain.book.entity.Book;
 import com.personalaccount.domain.book.entity.BookType;
 import com.personalaccount.domain.book.repository.BookRepository;
@@ -226,10 +227,22 @@ class BookServiceTest {
     @DisplayName("장부수정_성공")
     void updateBook_Success() {
         // Given
+        Long bookId = 1L;
+        Long userId = 1L;
+        BookUpdateRequest updateRequest = BookUpdateRequest.builder()
+                .name("수정된 장부")
+                .build();
+
+        given(bookRepository.findByIdAndIsActive(bookId, true)).willReturn(Optional.of(testBook));
 
         // When
+        Book result = bookService.updateBook(bookId, userId, updateRequest);
 
         // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getName()).isEqualTo("수정된 장부");
+
+        verify(bookRepository).findByIdAndIsActive(bookId, true);
     }
 
     @Test
