@@ -18,9 +18,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -151,10 +152,20 @@ class BookServiceTest {
     @DisplayName("장부목록조회_성공")
     void getBooksByUserId_Success() {
         // Given
+        Long userId = 1L;
+        List<Book> books = List.of(testBook);
+
+        given(bookRepository.findByUserIdAndIsActive(userId, true)).willReturn(books);
 
         // When
+        List<Book> result = bookService.getBooksByUserId(userId);
 
         // Then
+        assertThat(result).isNotNull();
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getName()).isEqualTo("내 장부");
+
+        verify(bookRepository).findByUserIdAndIsActive(userId, true);
     }
 
     @Test
