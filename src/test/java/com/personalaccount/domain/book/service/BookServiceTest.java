@@ -172,10 +172,20 @@ class BookServiceTest {
     @DisplayName("장부단건조회_성공")
     void getBook_Success() {
         // Given
+        Long bookId = 1L;
+        Long userId = 1L;
+
+        given(bookRepository.findByIdAndIsActive(bookId, true)).willReturn(Optional.of(testBook));
 
         // When
+        Book result = bookService.getBook(bookId, userId);
 
         // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(bookId);
+        assertThat(result.getName()).isEqualTo("내 장부");
+
+        verify(bookRepository).findByIdAndIsActive(bookId, true);
     }
 
     @Test
