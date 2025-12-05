@@ -249,9 +249,17 @@ class BookServiceTest {
     @DisplayName("장부삭제_SoftDelete_성공")
     void deleteBook_Success() {
         // Given
+        Long bookId = 1L;
+        Long userId = 1L;
+
+        given(bookRepository.findByIdAndIsActive(bookId, true)).willReturn(Optional.of(testBook));
 
         // When
+        bookService.deleteBook(bookId, userId);
 
         // Then
+        assertThat(testBook.getIsActive()).isFalse();
+
+        verify(bookRepository).findByIdAndIsActive(bookId, true);
     }
 }
