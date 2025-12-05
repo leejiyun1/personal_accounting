@@ -2,6 +2,7 @@ package com.personalaccount.domain.book.service;
 
 import com.personalaccount.common.exception.custom.BookNotFoundException;
 import com.personalaccount.common.exception.custom.DuplicateBookTypeException;
+import com.personalaccount.common.exception.custom.UnauthorizedBookAccessException;
 import com.personalaccount.common.exception.custom.UserNotFoundException;
 import com.personalaccount.domain.account.repository.AccountRepository;
 import com.personalaccount.domain.book.dto.request.BookCreateRequest;
@@ -209,8 +210,16 @@ class BookServiceTest {
     @DisplayName("장부단건조회_권한없음_예외발생")
     void getBook_Unauthorized_ThrowsException() {
         // Given
+        Long bookId = 1L;
+        Long userId = 999L;
+
+        given(bookRepository.findByIdAndIsActive(bookId, true)).willReturn(Optional.of(testBook));
 
         // When & Then
+        assertThatThrownBy(() -> bookService.getBook(bookId, userId))
+                .isInstanceOf(UnauthorizedBookAccessException.class);
+
+        verify(bookRepository).findByIdAndIsActive(bookId, true);
     }
 
     @Test
