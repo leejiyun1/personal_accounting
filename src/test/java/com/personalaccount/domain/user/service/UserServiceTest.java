@@ -151,9 +151,16 @@ class UserServiceTest {
     @DisplayName("사용자삭제_SoftDelete_성공")
     void deleteUser_Success() {
         // Given
+        Long userId = 1L;
+
+        given(userRepository.findById(userId)).willReturn(Optional.of(testUser));
 
         // When
+        userService.deleteUser(userId);
 
         // Then
+        assertThat(testUser.getIsActive()).isFalse();
+
+        verify(userRepository).findById(userId);
     }
 }
