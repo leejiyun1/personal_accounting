@@ -3,6 +3,7 @@ package com.personalaccount.domain.user.service;
 import com.personalaccount.common.exception.custom.DuplicateEmailException;
 import com.personalaccount.common.exception.custom.UserNotFoundException;
 import com.personalaccount.domain.user.dto.request.UserCreateRequest;
+import com.personalaccount.domain.user.dto.request.UserUpdateRequest;
 import com.personalaccount.domain.user.entity.User;
 import com.personalaccount.domain.user.repository.UserRepository;
 import com.personalaccount.domain.user.service.impl.UserServiceImpl;
@@ -129,10 +130,21 @@ class UserServiceTest {
     @DisplayName("사용자수정_성공")
     void updateUser_Success() {
         // Given
+        Long userId = 1L;
+        UserUpdateRequest updateRequest = UserUpdateRequest.builder()
+                .name("수정된이름")
+                .build();
+
+        given(userRepository.findById(userId)).willReturn(Optional.of(testUser));
 
         // When
+        User result = userService.updateUser(userId, updateRequest);
 
         // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getName()).isEqualTo("수정된이름");
+
+        verify(userRepository).findById(userId);
     }
 
     @Test
