@@ -1,6 +1,7 @@
 package com.personalaccount.domain.user.service;
 
 import com.personalaccount.common.exception.custom.DuplicateEmailException;
+import com.personalaccount.common.exception.custom.UserNotFoundException;
 import com.personalaccount.domain.user.dto.request.UserCreateRequest;
 import com.personalaccount.domain.user.entity.User;
 import com.personalaccount.domain.user.repository.UserRepository;
@@ -113,8 +114,15 @@ class UserServiceTest {
     @DisplayName("사용자조회_존재하지않음_예외발생")
     void getUser_NotFound_ThrowsException() {
         // Given
+        Long userId = 999L;
+
+        given(userRepository.findById(userId)).willReturn(Optional.empty());
 
         // When & Then
+        assertThatThrownBy(() -> userService.getUser(userId))
+                .isInstanceOf(UserNotFoundException.class);
+
+        verify(userRepository).findById(userId);
     }
 
     @Test
