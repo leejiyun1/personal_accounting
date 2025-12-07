@@ -1,5 +1,6 @@
 package com.personalaccount.domain.user.service;
 
+import com.personalaccount.common.exception.custom.DuplicateEmailException;
 import com.personalaccount.domain.user.dto.request.UserCreateRequest;
 import com.personalaccount.domain.user.entity.User;
 import com.personalaccount.domain.user.repository.UserRepository;
@@ -14,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
@@ -76,8 +78,13 @@ class UserServiceTest {
     @DisplayName("회원가입_중복이메일_예외발생")
     void createUser_DuplicateEmail_ThrowsException() {
         // Given
+        given(userRepository.existsByEmail(createRequest.getEmail())).willReturn(true);
 
         // When & Then
+        assertThatThrownBy(() -> userService.createUser(createRequest))
+                .isInstanceOf(DuplicateEmailException.class);
+
+        verify(userRepository).existsByEmail(createRequest.getEmail());
     }
 
     @Test
