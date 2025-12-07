@@ -4,6 +4,7 @@ import com.personalaccount.auth.dto.request.LoginRequest;
 import com.personalaccount.auth.dto.response.LoginResponse;
 import com.personalaccount.auth.jwt.JwtTokenProvider;
 import com.personalaccount.auth.service.impl.AuthServiceImpl;
+import com.personalaccount.common.exception.custom.UnauthorizedException;
 import com.personalaccount.common.ratelimit.RateLimitService;
 import com.personalaccount.domain.user.entity.User;
 import com.personalaccount.domain.user.repository.UserRepository;
@@ -21,6 +22,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
@@ -109,8 +111,15 @@ class AuthServiceTest {
     @DisplayName("로그인_사용자없음_예외발생")
     void login_UserNotFound_ThrowsException() {
         // Given
+        given(rateLimitService.tryConsume(any(), anyString())).willReturn(true);
+        given(userRepository.findByEmail(loginRequest.getEmail())).willReturn(Optional.empty());
 
         // When & Then
+        assertThatThrownBy(() -> authService.login(loginRequest))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("이메일 또는 비밀번호가 일치하지 않습니다");
+
+        verify(userRepository).findByEmail(loginRequest.getEmail());
     }
 
     @Test
