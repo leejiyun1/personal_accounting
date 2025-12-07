@@ -1,6 +1,7 @@
 package com.personalaccount.auth.service;
 
 import com.personalaccount.auth.dto.request.LoginRequest;
+import com.personalaccount.auth.dto.response.LoginResponse;
 import com.personalaccount.auth.jwt.JwtTokenProvider;
 import com.personalaccount.auth.service.impl.AuthServiceImpl;
 import com.personalaccount.common.ratelimit.RateLimitService;
@@ -16,6 +17,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AuthService 테스트")
@@ -55,19 +63,46 @@ class AuthServiceTest {
                 .isActive(true)
                 .build();
 
+        // LoginRequest 설정 (Reflection 사용)
         loginRequest = new LoginRequest();
-        // LoginRequest는 @NoArgsConstructor만 있어서 reflection으로 설정 필요
-        // 또는 테스트용 생성자 추가
+        try {
+            java.lang.reflect.Field emailField = LoginRequest.class.getDeclaredField("email");
+            emailField.setAccessible(true);
+            emailField.set(loginRequest, "test@test.com");
+
+            java.lang.reflect.Field passwordField = LoginRequest.class.getDeclaredField("password");
+            passwordField.setAccessible(true);
+            passwordField.set(loginRequest, "password123");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Test
     @DisplayName("로그인_성공_토큰생성확인")
     void login_Success() {
         // Given
+        given(rateLimitService.tryConsume(any(), anyString())).willReturn(true);
+        given(userRepository.findByEmail(loginRequest.getEmail())).willReturn(Optional.of(testUser));
+        given(passwordEncoder.matches(anyString(), anyString())).willReturn(true);
+        given(jwtTokenProvider.createAccessToken(anyLong(), anyString())).willReturn("accessToken");
+        given(jwtTokenProvider.createRefreshToken(anyLong())).willReturn("refreshToken");
 
         // When
+        LoginResponse result = authService.login(loginRequest);
 
         // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getAccessToken()).isEqualTo("accessToken");
+        assertThat(result.getRefreshToken()).isEqualTo("refreshToken");
+        assertThat(result.getUser()).isNotNull();
+        assertThat(result.getUser().getId()).isEqualTo(1L);
+        assertThat(result.getUser().getEmail()).isEqualTo("test@test.com");
+
+        verify(userRepository).findByEmail(loginRequest.getEmail());
+        verify(passwordEncoder).matches(anyString(), anyString());
+        verify(jwtTokenProvider).createAccessToken(anyLong(), anyString());
+        verify(jwtTokenProvider).createRefreshToken(anyLong());
     }
 
     @Test
