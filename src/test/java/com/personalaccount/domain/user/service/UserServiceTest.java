@@ -14,6 +14,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -91,10 +93,20 @@ class UserServiceTest {
     @DisplayName("사용자조회_성공")
     void getUser_Success() {
         // Given
+        Long userId = 1L;
+
+        given(userRepository.findById(userId)).willReturn(Optional.of(testUser));
 
         // When
+        User result = userService.getUser(userId);
 
         // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(userId);
+        assertThat(result.getEmail()).isEqualTo("test@test.com");
+        assertThat(result.getName()).isEqualTo("테스터");
+
+        verify(userRepository).findById(userId);
     }
 
     @Test
