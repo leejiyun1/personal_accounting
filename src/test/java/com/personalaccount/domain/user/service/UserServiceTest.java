@@ -13,6 +13,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+
 @ExtendWith(MockitoExtension.class)
 @DisplayName("UserService 테스트")
 class UserServiceTest {
@@ -50,10 +55,21 @@ class UserServiceTest {
     @DisplayName("회원가입_성공_비밀번호암호화확인")
     void createUser_Success() {
         // Given
+        given(userRepository.existsByEmail(createRequest.getEmail())).willReturn(false);
+        given(passwordEncoder.encode(createRequest.getPassword())).willReturn("encodedPassword");
+        given(userRepository.save(any(User.class))).willReturn(testUser);
 
         // When
+        User result = userService.createUser(createRequest);
 
         // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getEmail()).isEqualTo("test@test.com");
+        assertThat(result.getName()).isEqualTo("테스터");
+
+        verify(userRepository).existsByEmail(createRequest.getEmail());
+        verify(passwordEncoder).encode(createRequest.getPassword());
+        verify(userRepository).save(any(User.class));
     }
 
     @Test
