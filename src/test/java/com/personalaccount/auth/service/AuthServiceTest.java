@@ -21,6 +21,7 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -200,9 +201,26 @@ class AuthServiceTest {
     @DisplayName("로그아웃_성공_블랙리스트추가확인")
     void logout_Success() {
         // Given
+        String accessToken = "validAccessToken";
+        Long userId = 1L;
+        Long expiration = 900000L; // 15분
+
+        given(jwtTokenProvider.getUserId(accessToken)).willReturn(userId);
+        given(jwtTokenProvider.getExpiration(accessToken)).willReturn(expiration);
+        given(stringRedisTemplate.opsForValue()).willReturn(valueOperations);
 
         // When
+        authService.logout(accessToken);
 
         // Then
+        verify(jwtTokenProvider).getUserId(accessToken);
+        verify(jwtTokenProvider).getExpiration(accessToken);
+        verify(valueOperations).set(
+                eq("blacklist:" + accessToken),
+                eq("logout"),
+                eq(expiration),
+                eq(TimeUnit.MILLISECONDS)
+        );
     }
+
 }
