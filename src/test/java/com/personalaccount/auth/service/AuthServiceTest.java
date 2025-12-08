@@ -126,8 +126,17 @@ class AuthServiceTest {
     @DisplayName("로그인_비밀번호불일치_예외발생")
     void login_WrongPassword_ThrowsException() {
         // Given
+        given(rateLimitService.tryConsume(any(), anyString())).willReturn(true);
+        given(userRepository.findByEmail(loginRequest.getEmail())).willReturn(Optional.of(testUser));
+        given(passwordEncoder.matches(anyString(), anyString())).willReturn(false);
 
         // When & Then
+        assertThatThrownBy(() -> authService.login(loginRequest))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("이메일 또는 비밀번호가 일치하지 않습니다");
+
+        verify(userRepository).findByEmail(loginRequest.getEmail());
+        verify(passwordEncoder).matches(anyString(), anyString());
     }
 
     @Test
