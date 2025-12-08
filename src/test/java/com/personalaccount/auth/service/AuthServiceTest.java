@@ -177,8 +177,23 @@ class AuthServiceTest {
     @DisplayName("토큰갱신_유효하지않은토큰_예외발생")
     void refresh_InvalidToken_ThrowsException() {
         // Given
+        RefreshRequest refreshRequest = new RefreshRequest();
+        try {
+            java.lang.reflect.Field refreshTokenField = RefreshRequest.class.getDeclaredField("refreshToken");
+            refreshTokenField.setAccessible(true);
+            refreshTokenField.set(refreshRequest, "invalidRefreshToken");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        given(jwtTokenProvider.validateToken("invalidRefreshToken")).willReturn(false);
 
         // When & Then
+        assertThatThrownBy(() -> authService.refresh(refreshRequest))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("유효하지 않은 리프레시 토큰입니다");
+
+        verify(jwtTokenProvider).validateToken("invalidRefreshToken");
     }
 
     @Test
