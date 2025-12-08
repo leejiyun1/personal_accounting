@@ -1,6 +1,7 @@
 package com.personalaccount.auth.service;
 
 import com.personalaccount.auth.dto.request.LoginRequest;
+import com.personalaccount.auth.dto.request.RefreshRequest;
 import com.personalaccount.auth.dto.response.LoginResponse;
 import com.personalaccount.auth.jwt.JwtTokenProvider;
 import com.personalaccount.auth.service.impl.AuthServiceImpl;
@@ -143,10 +144,33 @@ class AuthServiceTest {
     @DisplayName("토큰갱신_성공")
     void refresh_Success() {
         // Given
+        RefreshRequest refreshRequest = new RefreshRequest();
+        try {
+            java.lang.reflect.Field refreshTokenField = RefreshRequest.class.getDeclaredField("refreshToken");
+            refreshTokenField.setAccessible(true);
+            refreshTokenField.set(refreshRequest, "validRefreshToken");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        given(jwtTokenProvider.validateToken("validRefreshToken")).willReturn(true);
+        given(jwtTokenProvider.getUserId("validRefreshToken")).willReturn(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(testUser));
+        given(jwtTokenProvider.createAccessToken(1L, "test@test.com")).willReturn("newAccessToken");
 
         // When
+        LoginResponse result = authService.refresh(refreshRequest);
 
         // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getAccessToken()).isEqualTo("newAccessToken");
+        assertThat(result.getRefreshToken()).isEqualTo("validRefreshToken");
+        assertThat(result.getUser()).isNotNull();
+        assertThat(result.getUser().getId()).isEqualTo(1L);
+
+        verify(jwtTokenProvider).validateToken("validRefreshToken");
+        verify(jwtTokenProvider).getUserId("validRefreshToken");
+        verify(userRepository).findById(1L);
     }
 
     @Test
