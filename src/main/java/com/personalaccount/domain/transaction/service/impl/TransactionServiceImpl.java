@@ -11,6 +11,7 @@ import com.personalaccount.domain.transaction.dto.request.TransactionCreateReque
 import com.personalaccount.domain.transaction.dto.request.TransactionSearchCondition;
 import com.personalaccount.domain.transaction.dto.request.TransactionUpdateRequest;
 import com.personalaccount.domain.transaction.dto.response.TransactionDetailResponse;
+import com.personalaccount.domain.transaction.dto.response.TransactionResponse;
 import com.personalaccount.domain.transaction.entity.*;
 import com.personalaccount.domain.transaction.repository.JournalEntryRepository;
 import com.personalaccount.domain.transaction.repository.TransactionDetailRepository;
@@ -25,6 +26,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -40,7 +43,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Transactional
     @Override
-    public Transaction createTransaction(Long userId, TransactionCreateRequest request) {
+    public TransactionResponse createTransaction(Long userId, TransactionCreateRequest request) {
         log.info("거래 생성 요청: userId={}, bookId={}, type={}, amount={}",
                 userId, request.getBookId(), request.getType(), request.getAmount());
 
@@ -76,11 +79,11 @@ public class TransactionServiceImpl implements TransactionService {
 
         log.info("거래 생성 완료: transactionId={}", savedTransaction.getId());
 
-        return savedTransaction;
+        return TransactionMapper.toResponse(savedTransaction);
     }
 
     @Override
-    public List<Transaction> getTransactions(
+    public List<TransactionResponse> getTransactions(
             Long userId,
             Long bookId,
             TransactionType type,
@@ -99,13 +102,81 @@ public class TransactionServiceImpl implements TransactionService {
                 .endDate(endDate)
                 .build();
 
-        return transactionRepository.searchTransactions(condition);
+        List<Transaction> transactions = transactionRepository.searchTransactions(condition);
+
+        return transactions.stream()
+                .map(TransactionMapper::toResponse)
+                .toList();
     }
 
     @Override
-    public Transaction getTransaction(Long userId, Long id) {
+    public TransactionResponse getTransaction(Long userId, Long id) {
         log.debug("거래 상세 조회: userId={}, transactionId={}", userId, id);
 
+        Transaction transaction = getTransactionEntity(userId, id);
+
+        return TransactionMapper.toResponse(transaction);
+    }
+
+    @Override
+    public TransactionDetailResponse getTransactionWithDetails(Long userId, Long id) {
+        log.debug("거래 상세 조회(복식부기 포함): userId={}, transactionId={}", userId, id);
+
+        Transaction transaction = getTransactionEntity(userId, id);
+        List<JournalEntry> journalEntries = journalEntryRepository.findByTransactionId(id);
+
+        // N+1 해결: IN 절로 한 번에 조회
+        List<Long> journalEntryIds = journalEntries.stream()
+                .map(JournalEntry::getId)
+                .toList();
+
+        List<TransactionDetail> allDetails = transactionDetailRepository
+                .findByJournalEntryIdIn(journalEntryIds);
+
+        // JournalEntry별로 그룹화
+        Map<Long, List<TransactionDetail>> detailsMap = allDetails.stream()
+                .collect(Collectors.groupingBy(
+                        detail -> detail.getJournalEntry().getId()
+                ));
+
+        // 순서 유지하면서 List<List<TransactionDetail>> 생성
+        List<List<TransactionDetail>> detailsList = journalEntries.stream()
+                .map(je -> detailsMap.getOrDefault(je.getId(), List.of()))
+                .toList();
+
+        return TransactionMapper.toDetailResponse(transaction, journalEntries, detailsList);
+    }
+
+    @Transactional
+    @Override
+    public TransactionResponse updateTransaction(Long userId, Long id, TransactionUpdateRequest request) {
+        log.info("거래 수정 요청: userId={}, transactionId={}", userId, id);
+
+        Transaction transaction = getTransactionEntity(userId, id);
+
+        if (request.getMemo() != null) {
+            transaction.updateMemo(request.getMemo());
+        }
+
+        log.info("거래 수정 완료: transactionId={}", id);
+
+        return TransactionMapper.toResponse(transaction);
+    }
+
+    @Transactional
+    @Override
+    public void deleteTransaction(Long userId, Long id) {
+        log.info("거래 삭제 요청: userId={}, transactionId={}", userId, id);
+
+        Transaction transaction = getTransactionEntity(userId, id);
+        transaction.deactivate();
+
+        log.info("거래 삭제 완료: transactionId={}", id);
+    }
+
+    // === Private Helper Methods ===
+
+    private Transaction getTransactionEntity(Long userId, Long id) {
         Transaction transaction = transactionRepository.findByIdWithBookAndUser(id)
                 .orElseThrow(() -> new TransactionNotFoundException(id));
 
@@ -116,53 +187,6 @@ public class TransactionServiceImpl implements TransactionService {
         return transaction;
     }
 
-    @Override
-    public TransactionDetailResponse getTransactionWithDetails(Long userId, Long id) {
-        log.debug("거래 상세 조회(복식부기 포함): userId={}, transactionId={}", userId, id);
-
-        Transaction transaction = getTransaction(userId, id);
-
-        List<JournalEntry> journalEntries = journalEntryRepository.findByTransactionId(id);
-
-        List<List<TransactionDetail>> detailsList = journalEntries.stream()
-                .map(je -> transactionDetailRepository.findByJournalEntryId(je.getId()))
-                .toList();
-
-        return TransactionMapper.toDetailResponse(transaction, journalEntries, detailsList);
-    }
-
-    @Transactional
-    @Override
-    public Transaction updateTransaction(Long userId, Long id, TransactionUpdateRequest request) {
-        log.info("거래 수정 요청: userId={}, transactionId={}", userId, id);
-
-        Transaction transaction = getTransaction(userId, id);
-
-        if (request.getMemo() != null) {
-            transaction.updateMemo(request.getMemo());
-        }
-
-        log.info("거래 수정 완료: transactionId={}", id);
-
-        return transaction;
-    }
-
-    @Transactional
-    @Override
-    public void deleteTransaction(Long userId, Long id) {
-        log.info("거래 삭제 요청: userId={}, transactionId={}", userId, id);
-
-        Transaction transaction = getTransaction(userId, id);
-        transaction.deactivate();
-
-        log.info("거래 삭제 완료: transactionId={}", id);
-    }
-
-    /**
-     * 복식부기 상세 내역 생성
-     * 수입: 차변(결제수단) = 대변(수익)
-     * 지출: 차변(비용) = 대변(결제수단)
-     */
     private void createDoubleEntryDetails(
             JournalEntry journalEntry,
             TransactionType type,
@@ -184,10 +208,6 @@ public class TransactionServiceImpl implements TransactionService {
         transactionDetailRepository.saveAll(details);
     }
 
-    /**
-     * 대차평형 검증
-     * 복식부기 원칙: 차변 합계 = 대변 합계
-     */
     private void validateDoubleEntry(List<TransactionDetail> details) {
         BigDecimal debitSum = details.stream()
                 .map(TransactionDetail::getDebitAmount)
@@ -205,11 +225,6 @@ public class TransactionServiceImpl implements TransactionService {
         }
     }
 
-    /**
-     * 계정과목 타입 검증
-     * 수입 거래 → 수익 계정
-     * 지출 거래 → 비용 계정
-     */
     private void validateAccountTypes(
             TransactionType transactionType,
             Account category,
@@ -232,11 +247,6 @@ public class TransactionServiceImpl implements TransactionService {
         }
     }
 
-    /**
-     * 장부 타입 일치 검증
-     * 개인 장부 → 개인 계정만
-     * 사업 장부 → 사업 계정만
-     */
     private void validateBookTypes(Book book, Account category, Account paymentMethod) {
         if (!category.getBookType().equals(book.getBookType())) {
             throw new InvalidTransactionException(

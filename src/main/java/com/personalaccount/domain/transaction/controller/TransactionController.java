@@ -2,12 +2,10 @@ package com.personalaccount.domain.transaction.controller;
 
 import com.personalaccount.common.dto.CommonResponse;
 import com.personalaccount.common.dto.ResponseFactory;
-import com.personalaccount.domain.transaction.dto.mapper.TransactionMapper;
 import com.personalaccount.domain.transaction.dto.request.TransactionCreateRequest;
 import com.personalaccount.domain.transaction.dto.request.TransactionUpdateRequest;
 import com.personalaccount.domain.transaction.dto.response.TransactionDetailResponse;
 import com.personalaccount.domain.transaction.dto.response.TransactionResponse;
-import com.personalaccount.domain.transaction.entity.Transaction;
 import com.personalaccount.domain.transaction.entity.TransactionType;
 import com.personalaccount.domain.transaction.service.TransactionService;
 import jakarta.validation.Valid;
@@ -37,8 +35,7 @@ public class TransactionController {
 
         log.info("거래 생성 API 호출: userId={}, bookId={}", userId, request.getBookId());
 
-        Transaction transaction = transactionService.createTransaction(userId, request);
-        TransactionResponse response = TransactionMapper.toResponse(transaction);
+        TransactionResponse response = transactionService.createTransaction(userId, request);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -56,12 +53,8 @@ public class TransactionController {
         log.info("거래 목록 조회 API: userId={}, bookId={}, type={}, start={}, end={}",
                 userId, bookId, type, startDate, endDate);
 
-        List<Transaction> transactions = transactionService.getTransactions(
+        List<TransactionResponse> response = transactionService.getTransactions(
                 userId, bookId, type, startDate, endDate);
-
-        List<TransactionResponse> response = transactions.stream()
-                .map(TransactionMapper::toResponse)
-                .toList();
 
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
@@ -73,8 +66,7 @@ public class TransactionController {
 
         log.info("거래 상세 조회 API 호출: userId={}, transactionId={}", userId, id);
 
-        Transaction transaction = transactionService.getTransaction(userId, id);
-        TransactionResponse response = TransactionMapper.toResponse(transaction);
+        TransactionResponse response = transactionService.getTransaction(userId, id);
 
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
@@ -99,8 +91,7 @@ public class TransactionController {
 
         log.info("거래 수정 API 호출: userId={}, transactionId={}", userId, id);
 
-        Transaction transaction = transactionService.updateTransaction(userId, id, request);
-        TransactionResponse response = TransactionMapper.toResponse(transaction);
+        TransactionResponse response = transactionService.updateTransaction(userId, id, request);
 
         return ResponseEntity.ok(ResponseFactory.success(response, "거래 수정 완료"));
     }

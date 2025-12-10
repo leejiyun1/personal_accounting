@@ -9,7 +9,13 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "transactions")
+@Table(
+        name = "transactions",
+        indexes = {
+                @Index(name = "idx_transaction_book_date", columnList = "book_id, date, is_active"),
+                @Index(name = "idx_transaction_book_type", columnList = "book_id, type, is_active")
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -41,10 +47,8 @@ public class Transaction extends BaseEntity {
     @Builder.Default
     private Boolean isActive = true;
 
-    // === 비즈니스 메서드 ===
-
-    public void updateMemo(String newMemo) {
-        this.memo = newMemo;
+    public void updateMemo(String memo) {
+        this.memo = memo;
     }
 
     public void deactivate() {

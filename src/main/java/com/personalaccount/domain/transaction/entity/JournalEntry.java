@@ -7,7 +7,12 @@ import lombok.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "journal_entries")
+@Table(
+        name = "journal_entries",
+        indexes = {
+                @Index(name = "idx_journal_entry_transaction_id", columnList = "transaction_id")
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor

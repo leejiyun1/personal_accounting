@@ -8,7 +8,12 @@ import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "transaction_details")
+@Table(
+        name = "transaction_details",
+        indexes = {
+                @Index(name = "idx_transaction_detail_journal_entry_id", columnList = "journal_entry_id")
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor

@@ -19,10 +19,8 @@ import com.personalaccount.domain.account.repository.AccountRepository;
 import com.personalaccount.domain.book.entity.Book;
 import com.personalaccount.domain.book.entity.BookType;
 import com.personalaccount.domain.book.repository.BookRepository;
-import com.personalaccount.domain.transaction.dto.mapper.TransactionMapper;
 import com.personalaccount.domain.transaction.dto.request.TransactionCreateRequest;
 import com.personalaccount.domain.transaction.dto.response.TransactionResponse;
-import com.personalaccount.domain.transaction.entity.Transaction;
 import com.personalaccount.domain.transaction.entity.TransactionType;
 import com.personalaccount.domain.transaction.service.TransactionService;
 import lombok.RequiredArgsConstructor;
@@ -126,9 +124,9 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     private String extractMessage(GeminiResponse response) {
-        return response.getCandidates().get(0)
+        return response.getCandidates().getFirst()
                 .getContent()
-                .getParts().get(0)
+                .getParts().getFirst()
                 .getText();
     }
 
@@ -145,8 +143,7 @@ public class AiChatServiceImpl implements AiChatService {
 
         TransactionCreateRequest transactionRequest = parseTransactionFromAi(aiMessage, session);
 
-        Transaction transaction = transactionService.createTransaction(userId, transactionRequest);
-        TransactionResponse transactionResponse = TransactionMapper.toResponse(transaction);
+        TransactionResponse transactionResponse = transactionService.createTransaction(userId, transactionRequest);
 
         sessionManager.deleteSession(session.getConversationId());
 
