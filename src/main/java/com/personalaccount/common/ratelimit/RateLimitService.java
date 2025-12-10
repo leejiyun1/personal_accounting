@@ -1,24 +1,22 @@
 package com.personalaccount.common.ratelimit;
 
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Refill;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class RateLimitService {
 
-    private final Map<String, Bucket> cache = new ConcurrentHashMap<>();
+    private final StringRedisTemplate redisTemplate;
 
-    // 키 타입 enum
+    private static final int MAX_ATTEMPTS = 5;  // 최대 시도 횟수
+    private static final long WINDOW_SIZE_SECONDS = 60;  // 1분 윈도우
+
     public enum KeyType {
         LOGIN("login");
 
@@ -34,44 +32,73 @@ public class RateLimitService {
     }
 
     /**
-     * Rate Limit 검증
+     * Sliding Window 기반 Rate Limit 검증
      *
      * @param keyType 키 타입
-     * @param identifier 식별자 (email, userId 등)
+     * @param identifier 식별자
      * @return true: 허용, false: 제한
      */
     public boolean tryConsume(KeyType keyType, String identifier) {
         String key = buildKey(keyType, identifier);
-        Bucket bucket = cache.computeIfAbsent(key, k -> createBucket());
-        return bucket.tryConsume(1);
+        long currentTime = System.currentTimeMillis();
+        long windowStart = currentTime - (WINDOW_SIZE_SECONDS * 1000);
+
+        try {
+            // 1. 만료된 요청 삭제 (Sliding Window)
+            redisTemplate.opsForZSet().removeRangeByScore(key, 0, windowStart);
+
+            // 2. 현재 윈도우 내 요청 개수 확인
+            Long count = redisTemplate.opsForZSet().zCard(key);
+
+            if (count != null && count >= MAX_ATTEMPTS) {
+                log.warn("Rate limit 초과: key={}, count={}", key, count);
+                return false;
+            }
+
+            // 3. 현재 요청 기록
+            redisTemplate.opsForZSet().add(key, String.valueOf(currentTime), currentTime);
+
+            // 4. TTL 설정 (메모리 관리)
+            redisTemplate.expire(key, Duration.ofSeconds(WINDOW_SIZE_SECONDS));
+
+            log.debug("Rate limit 통과: key={}, count={}", key, (count != null ? count + 1 : 1));
+            return true;
+
+        } catch (Exception e) {
+            log.error("Rate limit 처리 실패: key={}", key, e);
+            // Redis 장애 시 허용 (Fail-open)
+            return true;
+        }
     }
 
     /**
-     * 특정 키의 제한 초기화 (로그인 성공 시)
+     * Rate Limit 초기화 (로그인 성공 시)
      */
     public void reset(KeyType keyType, String identifier) {
         String key = buildKey(keyType, identifier);
-        cache.remove(key);
+        redisTemplate.delete(key);
         log.debug("Rate limit 초기화: key={}", key);
     }
 
     /**
-     * Bucket 생성
-     *
-     * 정책: 1분에 5회 요청 허용
+     * 남은 시도 횟수 조회
      */
-    private Bucket createBucket() {
-        Bandwidth limit = Bandwidth.classic(
-                5,  // 5회 허용
-                Refill.intervally(5, Duration.ofMinutes(1))  // 1분마다 5개 리필
-        );
-        return Bucket.builder()
-                .addLimit(limit)
-                .build();
+    public int getRemainingAttempts(KeyType keyType, String identifier) {
+        String key = buildKey(keyType, identifier);
+        long currentTime = System.currentTimeMillis();
+        long windowStart = currentTime - (WINDOW_SIZE_SECONDS * 1000);
+
+        try {
+            redisTemplate.opsForZSet().removeRangeByScore(key, 0, windowStart);
+            Long count = redisTemplate.opsForZSet().zCard(key);
+            return MAX_ATTEMPTS - (count != null ? count.intValue() : 0);
+        } catch (Exception e) {
+            log.error("남은 시도 횟수 조회 실패: key={}", key, e);
+            return MAX_ATTEMPTS;
+        }
     }
 
-    // 키 생성 로직 캡슐화
     private String buildKey(KeyType keyType, String identifier) {
-        return keyType.getPrefix() + ":" + identifier;
+        return "ratelimit:" + keyType.getPrefix() + ":" + identifier;
     }
 }
