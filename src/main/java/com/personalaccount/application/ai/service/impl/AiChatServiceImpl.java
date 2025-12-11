@@ -45,7 +45,7 @@ public class AiChatServiceImpl implements AiChatService {
     private final AccountRepository accountRepository;
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public AiChatResponse chat(Long userId, AiChatRequest request) {
         log.info("AI 대화 요청: userId={}, bookId={}", userId, request.getBookId());
 
@@ -90,6 +90,7 @@ public class AiChatServiceImpl implements AiChatService {
 
     private GeminiRequest buildGeminiRequest(ConversationSession session) {
         StringBuilder conversationText = new StringBuilder();
+        LocalDate today = LocalDate.now();
 
         conversationText.append("당신은 복식부기 가계부 도우미입니다.\n");
         conversationText.append("사용자의 수입/지출을 자연어로 입력받아 거래 정보를 추출합니다.\n\n");
@@ -98,12 +99,12 @@ public class AiChatServiceImpl implements AiChatService {
         conversationText.append("2. 금액\n");
         conversationText.append("3. 카테고리 (예: 급여, 식비, 교통비)\n");
         conversationText.append("4. 결제수단 (예: 현금, 은행, 카드)\n");
-        conversationText.append("5. 날짜 (생략 시 오늘)\n\n");
+        conversationText.append("5. 날짜 (\"오늘\" 또는 생략 시 오늘 날짜 사용: ").append(today).append(")\n\n");
         conversationText.append("정보가 부족하면 간단히 질문하세요.\n");
         conversationText.append("정보가 충분하면 \"COMPLETE:\" 로 시작하여 JSON 형식으로 응답하세요.\n\n");
         conversationText.append("예시:\n");
         conversationText.append("- 부족: \"어떤 수입인가요?\"\n");
-        conversationText.append("- 충분: \"COMPLETE: {\\\"type\\\":\\\"INCOME\\\",\\\"amount\\\":50000,\\\"category\\\":\\\"용돈\\\",\\\"paymentMethod\\\":\\\"현금\\\",\\\"date\\\":\\\"2025-10-18\\\"}\"\n\n");
+        conversationText.append("- 충분: \"COMPLETE: {\\\"type\\\":\\\"EXPENSE\\\",\\\"amount\\\":30000,\\\"category\\\":\\\"식비\\\",\\\"paymentMethod\\\":\\\"체크카드\\\",\\\"date\\\":\\\"").append(today).append("\\\"}\"\n\n");
         conversationText.append("---대화 시작---\n\n");
 
         for (ConversationSession.ChatMessage message : session.getMessages()) {
