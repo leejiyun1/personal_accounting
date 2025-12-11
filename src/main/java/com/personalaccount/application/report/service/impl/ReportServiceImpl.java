@@ -3,6 +3,8 @@ package com.personalaccount.application.report.service.impl;
 import com.personalaccount.application.report.dto.response.*;
 import com.personalaccount.application.report.repository.ReportQueryRepository;
 import com.personalaccount.application.report.service.ReportService;
+import com.personalaccount.common.exception.custom.AccountNotFoundException;
+import com.personalaccount.domain.account.entity.AccountType;
 import com.personalaccount.domain.account.repository.AccountRepository;
 import com.personalaccount.domain.book.entity.Book;
 import com.personalaccount.domain.book.repository.BookRepository;
@@ -36,27 +38,58 @@ public class ReportServiceImpl implements ReportService {
 
         validateBookAccess(userId, bookId);
 
-        // 최근 6개월
-        List<MonthlySummary> summaries = new ArrayList<>();
         LocalDate now = LocalDate.now();
+        LocalDate startDate = now.minusMonths(5).withDayOfMonth(1);
+        LocalDate endDate = now.withDayOfMonth(now.lengthOfMonth());
 
+        // 6개월 데이터 한 번에 조회
+        List<Tuple> results = reportQueryRepository.findIncomeExpenseByDateRange(bookId, startDate, endDate);
+
+        // 월별 집계용 Map (yearMonth -> [income, expense])
+        Map<String, BigDecimal[]> dataMap = new LinkedHashMap<>();
+
+        // 6개월 초기화
         for (int i = 5; i >= 0; i--) {
             LocalDate targetMonth = now.minusMonths(i);
-            LocalDate startDate = targetMonth.withDayOfMonth(1);
-            LocalDate endDate = targetMonth.withDayOfMonth(targetMonth.lengthOfMonth());
-
-            BigDecimal income = reportQueryRepository.findTotalIncome(bookId, startDate, endDate);
-            BigDecimal expense = reportQueryRepository.findTotalExpense(bookId, startDate, endDate);
-
-            summaries.add(MonthlySummary.builder()
-                    .yearMonth(targetMonth.toString().substring(0, 7))
-                    .income(income)
-                    .expense(expense)
-                    .balance(income.subtract(expense))
-                    .build());
+            String yearMonth = targetMonth.toString().substring(0, 7);
+            dataMap.put(yearMonth, new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
         }
 
-        return summaries;
+        // 데이터 집계
+        for (Tuple tuple : results) {
+            LocalDate date = tuple.get(0, LocalDate.class);
+            AccountType accountType = tuple.get(1, AccountType.class);
+            BigDecimal creditAmount = tuple.get(2, BigDecimal.class);
+            BigDecimal debitAmount = tuple.get(3, BigDecimal.class);
+
+            if (date == null) continue;
+            String yearMonth = date.toString().substring(0, 7);
+
+            BigDecimal[] amounts = dataMap.get(yearMonth);
+            if (amounts != null) {
+                if (accountType == AccountType.REVENUE) {
+                    amounts[0] = amounts[0].add(creditAmount);  // income
+                } else if (accountType == AccountType.EXPENSE) {
+                    amounts[1] = amounts[1].add(debitAmount);   // expense
+                }
+            }
+        }
+
+        // DTO 변환
+        return dataMap.entrySet().stream()
+                .map(entry -> {
+                    String yearMonth = entry.getKey();
+                    BigDecimal income = entry.getValue()[0];
+                    BigDecimal expense = entry.getValue()[1];
+
+                    return MonthlySummary.builder()
+                            .yearMonth(yearMonth)
+                            .income(income)
+                            .expense(expense)
+                            .balance(income.subtract(expense))
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -81,7 +114,7 @@ public class ReportServiceImpl implements ReportService {
                 .map(tuple -> {
                     String name = tuple.get(0, String.class);
                     BigDecimal amount = tuple.get(1, BigDecimal.class);
-                    Double percentage = totalAmount.compareTo(BigDecimal.ZERO) > 0
+                    Double percentage = totalAmount.compareTo(BigDecimal.ZERO) > 0 && amount != null
                             ? amount.divide(totalAmount, 4, RoundingMode.HALF_UP)
                             .multiply(BigDecimal.valueOf(100))
                             .doubleValue()
@@ -107,21 +140,31 @@ public class ReportServiceImpl implements ReportService {
                 .orElseThrow(() -> new BookNotFoundException("장부를 찾을 수 없습니다"));
 
         // 해당 장부 타입의 PAYMENT_METHOD 계정만 조회
-        return accountRepository.findByBookTypeAndAccountTypeAndIsActive(
+        List<com.personalaccount.domain.account.entity.Account> accounts =
+                accountRepository.findByBookTypeAndAccountTypeAndIsActive(
                         book.getBookType(),
                         com.personalaccount.domain.account.entity.AccountType.PAYMENT_METHOD,
-                        true)
-                .stream()
-                .map(account -> {
-                    // 각 계정의 잔액 계산 (수입 - 지출)
-                    BigDecimal balance = reportQueryRepository.findAccountBalance(bookId, account.getId());
+                        true);
 
-                    return AccountBalance.builder()
-                            .accountId(account.getId())
-                            .accountName(account.getName())
-                            .balance(balance)
-                            .build();
-                })
+        if (accounts.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 계정 ID 목록 추출
+        List<Long> accountIds = accounts.stream()
+                .map(com.personalaccount.domain.account.entity.Account::getId)
+                .collect(Collectors.toList());
+
+        // 잔액 일괄 조회 (N+1 해결)
+        Map<Long, BigDecimal> balanceMap = reportQueryRepository.findAccountBalancesByIds(bookId, accountIds);
+
+        // DTO 변환
+        return accounts.stream()
+                .map(account -> AccountBalance.builder()
+                        .accountId(account.getId())
+                        .accountName(account.getName())
+                        .balance(balanceMap.getOrDefault(account.getId(), BigDecimal.ZERO))
+                        .build())
                 .collect(Collectors.toList());
     }
 
@@ -208,7 +251,7 @@ public class ReportServiceImpl implements ReportService {
 
         // 계정명 조회
         String accountName = accountRepository.findById(accountId)
-                .orElseThrow(() -> new IllegalArgumentException("계정과목을 찾을 수 없습니다"))
+                .orElseThrow(() -> new AccountNotFoundException(accountId))
                 .getName();
 
         Map<String, Object> result = new HashMap<>();

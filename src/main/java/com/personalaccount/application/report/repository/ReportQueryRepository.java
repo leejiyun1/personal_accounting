@@ -10,7 +10,10 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 @RequiredArgsConstructor
@@ -229,5 +232,78 @@ public class ReportQueryRepository {
                 .fetchOne();
 
         return result != null ? result : BigDecimal.ZERO;
+    }
+
+    /**
+     * 기간별 수입/지출 거래 일괄 조회 (월별 요약용)
+     */
+    public List<Tuple> findIncomeExpenseByDateRange(Long bookId, LocalDate startDate, LocalDate endDate) {
+        QTransaction transaction = QTransaction.transaction;
+        QJournalEntry journalEntry = QJournalEntry.journalEntry;
+        QTransactionDetail detail = QTransactionDetail.transactionDetail;
+        QAccount account = QAccount.account;
+
+        return queryFactory
+                .select(
+                        transaction.date,
+                        account.accountType,
+                        detail.creditAmount,
+                        detail.debitAmount
+                )
+                .from(transaction)
+                .join(journalEntry).on(journalEntry.transaction.eq(transaction))
+                .join(detail).on(detail.journalEntry.eq(journalEntry))
+                .join(account).on(detail.account.eq(account))
+                .where(
+                        transaction.book.id.eq(bookId),
+                        transaction.date.between(startDate, endDate),
+                        transaction.isActive.isTrue(),
+                        account.accountType.in(AccountType.REVENUE, AccountType.EXPENSE)
+                )
+                .fetch();
+    }
+
+    /**
+     * 여러 계정의 잔액 일괄 조회 (IN 절)
+     */
+    public Map<Long, BigDecimal> findAccountBalancesByIds(Long bookId, List<Long> accountIds) {
+        if (accountIds == null || accountIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        QTransaction transaction = QTransaction.transaction;
+        QJournalEntry journalEntry = QJournalEntry.journalEntry;
+        QTransactionDetail detail = QTransactionDetail.transactionDetail;
+
+        List<Tuple> results = queryFactory
+                .select(
+                        detail.account.id,
+                        detail.debitAmount.subtract(detail.creditAmount).sum()
+                )
+                .from(transaction)
+                .join(journalEntry).on(journalEntry.transaction.eq(transaction))
+                .join(detail).on(detail.journalEntry.eq(journalEntry))
+                .where(
+                        transaction.book.id.eq(bookId),
+                        detail.account.id.in(accountIds),
+                        transaction.isActive.isTrue()
+                )
+                .groupBy(detail.account.id)
+                .fetch();
+
+        // Map으로 변환
+        Map<Long, BigDecimal> balanceMap = new HashMap<>();
+        for (Tuple tuple : results) {
+            Long accountId = tuple.get(0, Long.class);
+            BigDecimal balance = tuple.get(1, BigDecimal.class);
+            balanceMap.put(accountId, balance != null ? balance : BigDecimal.ZERO);
+        }
+
+        // 조회되지 않은 계정은 0으로 설정
+        for (Long accountId : accountIds) {
+            balanceMap.putIfAbsent(accountId, BigDecimal.ZERO);
+        }
+
+        return balanceMap;
     }
 }
