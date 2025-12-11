@@ -4,6 +4,7 @@ import com.personalaccount.domain.book.entity.Book;
 import com.personalaccount.domain.book.entity.BookType;
 import com.personalaccount.domain.book.repository.BookRepository;
 import com.personalaccount.domain.transaction.dto.request.TransactionSearchCondition;
+import com.personalaccount.domain.transaction.dto.response.TransactionResponse;
 import com.personalaccount.domain.transaction.entity.Transaction;
 import com.personalaccount.domain.transaction.entity.TransactionType;
 import com.personalaccount.domain.transaction.repository.TransactionRepository;
@@ -91,13 +92,13 @@ public class TransactionServiceQueryTest {
                 .willReturn(List.of(testTransaction));
 
         // When
-        List<Transaction> result = transactionService.getTransactions(
+        List<TransactionResponse> result = transactionService.getTransactions(
                 userId,bookId,type,startDate,endDate);
 
         //Then
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getId()).isEqualTo(1L);
-        assertThat(result.get(0).getType()).isEqualTo(TransactionType.INCOME);
+        assertThat(result.getFirst().getId()).isEqualTo(1L);
+        assertThat(result.getFirst().getType()).isEqualTo(TransactionType.INCOME);
 
         // Repository 호출 확인
         verify(bookRepository).findByIdAndIsActive(1L, true);
@@ -122,7 +123,7 @@ public class TransactionServiceQueryTest {
                 .willReturn(Optional.of(testTransaction));
 
         // When
-        Transaction result = transactionService.getTransaction(userId, transactionId);
+        TransactionResponse result = transactionService.getTransaction(userId, transactionId);
 
         // Then
         assertThat(result).isNotNull();

@@ -3,6 +3,7 @@ package com.personalaccount.domain.transaction.service;
 import com.personalaccount.domain.book.entity.Book;
 import com.personalaccount.domain.book.entity.BookType;
 import com.personalaccount.domain.transaction.dto.request.TransactionUpdateRequest;
+import com.personalaccount.domain.transaction.dto.response.TransactionResponse;
 import com.personalaccount.domain.transaction.entity.Transaction;
 import com.personalaccount.domain.transaction.entity.TransactionType;
 import com.personalaccount.domain.transaction.repository.TransactionRepository;
@@ -77,7 +78,7 @@ class TransactionServiceUpdateTest {
                 .willReturn(Optional.of(testTransaction));
 
         // When
-        Transaction result = transactionService.updateTransaction(userId, transactionId, request);
+        TransactionResponse result = transactionService.updateTransaction(userId, transactionId, request);
 
         // Then
         assertThat(result).isNotNull();

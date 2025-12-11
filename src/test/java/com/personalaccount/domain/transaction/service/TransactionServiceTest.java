@@ -7,6 +7,7 @@ import com.personalaccount.domain.book.entity.Book;
 import com.personalaccount.domain.book.entity.BookType;
 import com.personalaccount.domain.book.repository.BookRepository;
 import com.personalaccount.domain.transaction.dto.request.TransactionCreateRequest;
+import com.personalaccount.domain.transaction.dto.response.TransactionResponse;
 import com.personalaccount.domain.transaction.entity.*;
 import com.personalaccount.domain.transaction.repository.JournalEntryRepository;
 import com.personalaccount.domain.transaction.repository.TransactionDetailRepository;
@@ -160,7 +161,7 @@ class TransactionServiceTest {
                 });
 
         // When: 거래 생성 실행
-        Transaction result = transactionService.createTransaction(testUser.getId(), request);
+        TransactionResponse result = transactionService.createTransaction(testUser.getId(), request);
 
         // Then: 기본 검증
         assertThat(result).isNotNull();
@@ -267,7 +268,7 @@ class TransactionServiceTest {
                 });
 
         // When: 거래 생성 실행
-        Transaction result = transactionService.createTransaction(testUser.getId(), request);
+        TransactionResponse result = transactionService.createTransaction(testUser.getId(), request);
 
         // Then: 기본 검증
         assertThat(result).isNotNull();
