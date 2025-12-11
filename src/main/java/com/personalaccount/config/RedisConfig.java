@@ -8,13 +8,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
 public class RedisConfig {
 
-    // AI 세션 저장용 (LocalDateTime 처리를 위한 커스텀 설정)
     @Bean
     public RedisTemplate<String, ConversationSession> redisTemplate(
             RedisConnectionFactory connectionFactory
@@ -27,11 +26,15 @@ public class RedisConfig {
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
+        // Jackson2JsonRedisSerializer 사용 (타입 지정)
+        Jackson2JsonRedisSerializer<ConversationSession> serializer =
+                new Jackson2JsonRedisSerializer<>(objectMapper, ConversationSession.class);
+
         // Key는 String, Value는 JSON으로 직렬화
         template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));
+        template.setValueSerializer(serializer);
         template.setHashKeySerializer(new StringRedisSerializer());
-        template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));
+        template.setHashValueSerializer(serializer);
 
         return template;
     }
