@@ -4,21 +4,16 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: accounting-postgres
-
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-personal_accounting}
       POSTGRES_USER: ${POSTGRES_USER:-jiyun}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jiyun016}
-
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
-
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
     networks:
       - accounting-network
-
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jiyun} -d ${POSTGRES_DB:-personal_accounting}"]
       interval: 10s
@@ -28,21 +23,55 @@ services:
   redis:
     image: redis:7-alpine
     container_name: accounting-redis
-
     ports:
       - "${REDIS_PORT:-6379}:6379"
-
     volumes:
       - redis_data:/data
-
     networks:
       - accounting-network
-
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: personal-accounting:latest
+    container_name: accounting-app
+    ports:
+      - "8080:8080"
+    environment:
+      # Database
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-personal_accounting}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-jiyun}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-jiyun016}
+
+      # Redis
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-your_secret_key_here_minimum_256_bits_change_this_in_production}
+      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION:-900000}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
+
+      # AI
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_API_URL: ${GEMINI_API_URL:-https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent}
+
+      # Profile
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - accounting-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
