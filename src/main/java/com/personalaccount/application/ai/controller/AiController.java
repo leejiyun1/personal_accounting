@@ -1,8 +1,8 @@
 package com.personalaccount.application.ai.controller;
 
-import com.personalaccount.application.ai.dto.request.AiChatRequest;
-import com.personalaccount.application.ai.dto.response.AiChatResponse;
-import com.personalaccount.application.ai.service.AiChatService;
+import com.personalaccount.application.ai.chat.dto.request.AiChatRequest;
+import com.personalaccount.application.ai.chat.dto.response.AiChatResponse;
+import com.personalaccount.application.ai.chat.service.AiChatService;
 import com.personalaccount.common.dto.CommonResponse;
 import com.personalaccount.common.dto.ResponseFactory;
 import jakarta.validation.Valid;

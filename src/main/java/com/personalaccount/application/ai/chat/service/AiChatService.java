@@ -1,0 +1,12 @@
+package com.personalaccount.application.ai.chat.service;
+
+import com.personalaccount.application.ai.chat.dto.request.AiChatRequest;
+import com.personalaccount.application.ai.chat.dto.response.AiChatResponse;
+
+public interface AiChatService {
+
+    /**
+     * AI와 대화
+     */
+    AiChatResponse chat(Long userId, AiChatRequest request);
+}

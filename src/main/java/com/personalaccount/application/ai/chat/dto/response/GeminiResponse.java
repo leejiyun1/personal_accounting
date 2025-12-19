@@ -1,4 +1,4 @@
-package com.personalaccount.application.ai.dto.response;
+package com.personalaccount.application.ai.chat.dto.response;
 
 import lombok.Getter;
 import lombok.Setter;

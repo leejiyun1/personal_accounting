@@ -1,4 +1,4 @@
-package com.personalaccount.application.ai.dto.response;
+package com.personalaccount.application.ai.chat.dto.response;
 
 import com.personalaccount.domain.transaction.dto.response.TransactionResponse;
 import lombok.AllArgsConstructor;

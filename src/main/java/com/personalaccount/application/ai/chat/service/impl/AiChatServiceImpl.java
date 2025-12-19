@@ -1,13 +1,13 @@
-package com.personalaccount.application.ai.service.impl;
+package com.personalaccount.application.ai.chat.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.personalaccount.application.ai.client.AiClient;
-import com.personalaccount.application.ai.dto.request.AiChatRequest;
-import com.personalaccount.application.ai.dto.request.GeminiRequest;
-import com.personalaccount.application.ai.dto.response.AiChatResponse;
-import com.personalaccount.application.ai.dto.response.GeminiResponse;
-import com.personalaccount.application.ai.service.AiChatService;
+import com.personalaccount.application.ai.chat.dto.request.AiChatRequest;
+import com.personalaccount.application.ai.chat.dto.request.GeminiRequest;
+import com.personalaccount.application.ai.chat.dto.response.AiChatResponse;
+import com.personalaccount.application.ai.chat.dto.response.GeminiResponse;
+import com.personalaccount.application.ai.chat.service.AiChatService;
 import com.personalaccount.application.ai.session.ConversationSession;
 import com.personalaccount.application.ai.session.SessionManager;
 import com.personalaccount.common.exception.custom.AccountNotFoundException;

@@ -1,7 +1,7 @@
 package com.personalaccount.application.ai.client;
 
-import com.personalaccount.application.ai.dto.request.GeminiRequest;
-import com.personalaccount.application.ai.dto.response.GeminiResponse;
+import com.personalaccount.application.ai.chat.dto.request.GeminiRequest;
+import com.personalaccount.application.ai.chat.dto.response.GeminiResponse;
 
 public interface AiClient {
 

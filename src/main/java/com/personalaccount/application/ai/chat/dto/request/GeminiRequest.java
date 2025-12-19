@@ -1,4 +1,4 @@
-package com.personalaccount.application.ai.dto.request;
+package com.personalaccount.application.ai.chat.dto.request;
 
 import lombok.Builder;
 import lombok.Getter;

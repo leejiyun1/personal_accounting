@@ -1,8 +1,8 @@
 package com.personalaccount.application.ai.client.impl;
 
 import com.personalaccount.application.ai.client.AiClient;
-import com.personalaccount.application.ai.dto.request.GeminiRequest;
-import com.personalaccount.application.ai.dto.response.GeminiResponse;
+import com.personalaccount.application.ai.chat.dto.request.GeminiRequest;
+import com.personalaccount.application.ai.chat.dto.response.GeminiResponse;
 import com.personalaccount.common.exception.custom.AiServiceException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
