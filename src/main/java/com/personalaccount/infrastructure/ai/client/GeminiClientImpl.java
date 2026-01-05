@@ -1,9 +1,9 @@
-package com.personalaccount.application.ai.client.impl;
+package com.personalaccount.infrastructure.ai.client;
 
-import com.personalaccount.application.ai.client.AiClient;
 import com.personalaccount.application.ai.chat.dto.request.GeminiRequest;
 import com.personalaccount.application.ai.chat.dto.response.GeminiResponse;
 import com.personalaccount.common.exception.custom.AiServiceException;
+import com.personalaccount.domain.ai.client.AiClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -15,14 +15,14 @@ import java.time.Duration;
 
 @Slf4j
 @Component
-public class AiClientImpl implements AiClient {
+public class GeminiClientImpl implements AiClient {
 
     private final WebClient webClient;
     private final String apiKey;
     private final int maxRetry;
     private final long timeout;
 
-    public AiClientImpl(
+    public GeminiClientImpl(
             WebClient.Builder webClientBuilder,
             @Value("${gemini.api-key}") String apiKey,
             @Value("${gemini.api-url}") String apiUrl,

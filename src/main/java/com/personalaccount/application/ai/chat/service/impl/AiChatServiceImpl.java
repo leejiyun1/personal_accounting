@@ -2,20 +2,20 @@ package com.personalaccount.application.ai.chat.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.personalaccount.application.ai.client.AiClient;
 import com.personalaccount.application.ai.chat.dto.request.AiChatRequest;
 import com.personalaccount.application.ai.chat.dto.request.GeminiRequest;
 import com.personalaccount.application.ai.chat.dto.response.AiChatResponse;
 import com.personalaccount.application.ai.chat.dto.response.GeminiResponse;
 import com.personalaccount.application.ai.chat.service.AiChatService;
 import com.personalaccount.application.ai.session.ConversationSession;
-import com.personalaccount.application.ai.session.SessionManager;
 import com.personalaccount.common.exception.custom.AccountNotFoundException;
 import com.personalaccount.common.exception.custom.AiParsingException;
 import com.personalaccount.common.exception.custom.BookNotFoundException;
 import com.personalaccount.common.exception.custom.SessionNotFoundException;
 import com.personalaccount.common.exception.custom.UnauthorizedBookAccessException;
 import com.personalaccount.domain.account.repository.AccountRepository;
+import com.personalaccount.domain.ai.client.AiClient;
+import com.personalaccount.domain.ai.repository.SessionRepository;
 import com.personalaccount.domain.book.entity.Book;
 import com.personalaccount.domain.book.entity.BookType;
 import com.personalaccount.domain.book.repository.BookRepository;
@@ -38,8 +38,8 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class AiChatServiceImpl implements AiChatService {
 
-    private final AiClient aiClient;
-    private final SessionManager sessionManager;
+    private final AiClient aiClient;  // ⭐ 인터페이스 의존
+    private final SessionRepository sessionRepository;  // ⭐ 인터페이스 의존
     private final BookRepository bookRepository;
     private final TransactionService transactionService;
     private final AccountRepository accountRepository;
@@ -78,14 +78,55 @@ public class AiChatServiceImpl implements AiChatService {
             Long bookId
     ) {
         if (conversationId == null || conversationId.isEmpty()) {
-            return sessionManager.createSession(userId, bookId);
+            return sessionRepository.createSession(userId, bookId);  // ⭐ 변경
         } else {
-            ConversationSession session = sessionManager.getSession(conversationId);
+            ConversationSession session = sessionRepository.getSession(conversationId);  // ⭐ 변경
             if (session == null) {
                 throw new SessionNotFoundException("세션을 찾을 수 없습니다. conversationId: " + conversationId);
             }
             return session;
         }
+    }
+
+    // ... (나머지 메서드는 동일)
+
+    private AiChatResponse handleCompleteTransaction(
+            Long userId,
+            ConversationSession session,
+            String aiMessage
+    ) {
+        log.info("거래 생성: conversationId={}", session.getConversationId());
+
+        TransactionCreateRequest transactionRequest = parseTransactionFromAi(aiMessage, session);
+
+        TransactionResponse transactionResponse = transactionService.createTransaction(userId, transactionRequest);
+
+        sessionRepository.deleteSession(session.getConversationId());  // ⭐ 변경
+
+        return AiChatResponse.builder()
+                .conversationId(null)
+                .needsMoreInfo(false)
+                .message("거래가 생성되었습니다!")
+                .suggestions(null)
+                .transaction(transactionResponse)
+                .build();
+    }
+
+    private AiChatResponse handleMoreInfoNeeded(
+            ConversationSession session,
+            String aiMessage
+    ) {
+        log.debug("추가 정보 필요: conversationId={}", session.getConversationId());
+
+        sessionRepository.saveSession(session);  // ⭐ 변경
+
+        return AiChatResponse.builder()
+                .conversationId(session.getConversationId())
+                .needsMoreInfo(true)
+                .message(aiMessage)
+                .suggestions(null)
+                .transaction(null)
+                .build();
     }
 
     private GeminiRequest buildGeminiRequest(ConversationSession session) {
@@ -133,45 +174,6 @@ public class AiChatServiceImpl implements AiChatService {
 
     private boolean isTransactionComplete(String message) {
         return message.startsWith("COMPLETE:");
-    }
-
-    private AiChatResponse handleCompleteTransaction(
-            Long userId,
-            ConversationSession session,
-            String aiMessage
-    ) {
-        log.info("거래 생성: conversationId={}", session.getConversationId());
-
-        TransactionCreateRequest transactionRequest = parseTransactionFromAi(aiMessage, session);
-
-        TransactionResponse transactionResponse = transactionService.createTransaction(userId, transactionRequest);
-
-        sessionManager.deleteSession(session.getConversationId());
-
-        return AiChatResponse.builder()
-                .conversationId(null)
-                .needsMoreInfo(false)
-                .message("거래가 생성되었습니다!")
-                .suggestions(null)
-                .transaction(transactionResponse)
-                .build();
-    }
-
-    private AiChatResponse handleMoreInfoNeeded(
-            ConversationSession session,
-            String aiMessage
-    ) {
-        log.debug("추가 정보 필요: conversationId={}", session.getConversationId());
-
-        sessionManager.saveSession(session);
-
-        return AiChatResponse.builder()
-                .conversationId(session.getConversationId())
-                .needsMoreInfo(true)
-                .message(aiMessage)
-                .suggestions(null)
-                .transaction(null)
-                .build();
     }
 
     private TransactionCreateRequest parseTransactionFromAi(
