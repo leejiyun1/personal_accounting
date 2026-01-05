@@ -1,5 +1,6 @@
 package com.personalaccount.application.report.dto.response;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -11,10 +12,21 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Schema(description = "카테고리별 통계")
 public class CategorySummary {
-    private Long categoryId;         // 계정과목 ID
-    private String categoryCode;     // 계정과목 코드 (5100)
-    private String categoryName;     // 계정과목 이름 (식비)
-    private BigDecimal amount;       // 금액
-    private Double percentage;       // 비율 (%)
+
+    @Schema(description = "카테고리 ID", example = "1")
+    private Long categoryId;
+
+    @Schema(description = "카테고리 코드", example = "5100")
+    private String categoryCode;
+
+    @Schema(description = "카테고리 이름", example = "식비")
+    private String categoryName;
+
+    @Schema(description = "금액", example = "500000")
+    private BigDecimal amount;
+
+    @Schema(description = "비율 (%)", example = "25.5")
+    private Double percentage;
 }
