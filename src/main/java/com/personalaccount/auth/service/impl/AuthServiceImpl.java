@@ -86,12 +86,21 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new UserNotFoundException(userId));
 
         String newAccessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+        String newRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
-        log.info("토큰 갱신 성공: userId={}", userId);
+        long expiration = jwtTokenProvider.getExpiration(request.getRefreshToken());
+        stringRedisTemplate.opsForValue().set(
+                "blacklist:" + request.getRefreshToken(),
+                "rotated",
+                expiration,
+                TimeUnit.MILLISECONDS
+        );
+
+        log.info("토큰 갱신 성공: userId={}, 기존 Refresh Token 무효화", userId);
 
         return LoginResponse.builder()
                 .accessToken(newAccessToken)
-                .refreshToken(request.getRefreshToken())
+                .refreshToken(newRefreshToken)  // ← 새 Refresh Token 반환
                 .user(LoginResponse.UserInfo.builder()
                         .id(user.getId())
                         .email(user.getEmail())

@@ -23,7 +23,7 @@ import java.util.Collections;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final StringRedisTemplate stringRedisTemplate; // Spring Boot 자동 설정 빈 사용
+    private final StringRedisTemplate stringRedisTemplate;
 
     @Override
     protected void doFilterInternal(
@@ -41,7 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 // 블랙리스트 체크
                 if (isBlacklisted(token)) {
-                    log.warn("블랙리스트 토큰 접근 시도");
+                    log.warn("블랙리스트 토큰 접근 시도: {}", request.getRequestURI());
                     filterChain.doFilter(request, response);
                     return;
                 }
