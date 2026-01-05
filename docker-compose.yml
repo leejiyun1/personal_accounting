@@ -6,8 +6,8 @@ services:
     container_name: accounting-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-personal_accounting}
-      POSTGRES_USER: ${POSTGRES_USER:-jiyun}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jiyun016}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -15,7 +15,7 @@ services:
     networks:
       - accounting-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jiyun} -d ${POSTGRES_DB:-personal_accounting}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB:-personal_accounting}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -46,15 +46,15 @@ services:
     environment:
       # Database
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-personal_accounting}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-jiyun}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-jiyun016}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
 
       # Redis
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
 
       # JWT
-      JWT_SECRET: ${JWT_SECRET:-your_secret_key_here_minimum_256_bits_change_this_in_production}
+      JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION:-900000}
       JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
 
