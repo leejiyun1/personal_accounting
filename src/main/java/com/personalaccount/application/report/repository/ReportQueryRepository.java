@@ -15,6 +15,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 재무제표 및 통계 조회용 Repository
+
+ * 성능 최적화:
+ * - Transaction 도메인에서 N+1 방지 (Fetch Join, IN 절) 완료
+ * - 복잡한 집계 쿼리는 QueryDSL 사용
+ * - 인덱스 활용: idx_transaction_book_date, idx_detail_account_id
+
+ * TODO: 거래 데이터 1000건 이상 시 성능 모니터링 필요
+ */
 @Repository
 @RequiredArgsConstructor
 public class ReportQueryRepository {
