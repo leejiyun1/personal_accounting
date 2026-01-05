@@ -24,39 +24,27 @@ public class AuthController {
     public ResponseEntity<CommonResponse<LoginResponse>> login(
             @Valid @RequestBody LoginRequest request
     ) {
-        log.info("로그인 API 호출: email={}", request.getEmail());
-
+        log.info("POST /api/v1/auth/login");
         LoginResponse response = authService.login(request);
-
-        return ResponseEntity.ok(
-                ResponseFactory.success(response, "로그인 성공")
-        );
+        return ResponseEntity.ok(ResponseFactory.success(response, "로그인 성공"));
     }
 
     @PostMapping("/refresh")
     public ResponseEntity<CommonResponse<LoginResponse>> refresh(
             @Valid @RequestBody RefreshRequest request
     ) {
-        log.info("토큰 갱신 API 호출");
-
+        log.info("POST /api/v1/auth/refresh");
         LoginResponse response = authService.refresh(request);
-
-        return ResponseEntity.ok(
-                ResponseFactory.success(response, "토큰 갱신 성공")
-        );
+        return ResponseEntity.ok(ResponseFactory.success(response, "토큰 갱신 성공"));
     }
 
     @PostMapping("/logout")
     public ResponseEntity<CommonResponse<Void>> logout(
             @RequestHeader("Authorization") String authorization
     ) {
-        log.info("로그아웃 API 호출");
-
+        log.info("POST /api/v1/auth/logout");
         String accessToken = authorization.replace("Bearer ", "");
         authService.logout(accessToken);
-
-        return ResponseEntity.ok(
-                ResponseFactory.successWithMessage("로그아웃 성공")
-        );
+        return ResponseEntity.ok(ResponseFactory.successWithMessage("로그아웃 성공"));
     }
 }
