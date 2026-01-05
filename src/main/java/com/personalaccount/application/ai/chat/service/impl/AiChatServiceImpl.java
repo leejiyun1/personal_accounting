@@ -8,8 +8,10 @@ import com.personalaccount.application.ai.chat.dto.response.AiChatResponse;
 import com.personalaccount.application.ai.chat.dto.response.GeminiResponse;
 import com.personalaccount.application.ai.chat.service.AiChatService;
 import com.personalaccount.application.ai.session.ConversationSession;
+import com.personalaccount.application.ai.util.PromptTemplate;
 import com.personalaccount.common.exception.custom.AccountNotFoundException;
 import com.personalaccount.common.exception.custom.AiParsingException;
+import com.personalaccount.common.exception.custom.AiServiceException;
 import com.personalaccount.common.exception.custom.BookNotFoundException;
 import com.personalaccount.common.exception.custom.SessionNotFoundException;
 import com.personalaccount.common.exception.custom.UnauthorizedBookAccessException;
@@ -31,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -38,11 +41,12 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class AiChatServiceImpl implements AiChatService {
 
-    private final AiClient aiClient;  // ⭐ 인터페이스 의존
-    private final SessionRepository sessionRepository;  // ⭐ 인터페이스 의존
+    private final AiClient aiClient;
+    private final SessionRepository sessionRepository;
     private final BookRepository bookRepository;
     private final TransactionService transactionService;
     private final AccountRepository accountRepository;
+    private final PromptTemplate promptTemplate;
 
     @Override
     @Transactional
@@ -60,7 +64,20 @@ public class AiChatServiceImpl implements AiChatService {
         session.addMessage("user", request.getMessage());
 
         GeminiRequest geminiRequest = buildGeminiRequest(session);
-        GeminiResponse geminiResponse = aiClient.sendMessage(geminiRequest);
+
+        GeminiResponse geminiResponse = aiClient.sendMessage(geminiRequest)
+                .block();
+
+        if (geminiResponse == null) {
+            throw new AiServiceException("AI 응답이 비어있습니다");
+        }
+
+        // 토큰 사용량 로깅
+        if (geminiResponse.getUsageMetadata() != null) {
+            log.info("대화 세션 {} - 토큰 사용: {}",
+                    session.getConversationId(),
+                    geminiResponse.getUsageMetadata().getTotalTokenCount());
+        }
 
         String aiMessage = extractMessage(geminiResponse);
         session.addMessage("assistant", aiMessage);
@@ -78,17 +95,15 @@ public class AiChatServiceImpl implements AiChatService {
             Long bookId
     ) {
         if (conversationId == null || conversationId.isEmpty()) {
-            return sessionRepository.createSession(userId, bookId);  // ⭐ 변경
+            return sessionRepository.createSession(userId, bookId);
         } else {
-            ConversationSession session = sessionRepository.getSession(conversationId);  // ⭐ 변경
+            ConversationSession session = sessionRepository.getSession(conversationId);
             if (session == null) {
                 throw new SessionNotFoundException("세션을 찾을 수 없습니다. conversationId: " + conversationId);
             }
             return session;
         }
     }
-
-    // ... (나머지 메서드는 동일)
 
     private AiChatResponse handleCompleteTransaction(
             Long userId,
@@ -101,7 +116,7 @@ public class AiChatServiceImpl implements AiChatService {
 
         TransactionResponse transactionResponse = transactionService.createTransaction(userId, transactionRequest);
 
-        sessionRepository.deleteSession(session.getConversationId());  // ⭐ 변경
+        sessionRepository.deleteSession(session.getConversationId());
 
         return AiChatResponse.builder()
                 .conversationId(null)
@@ -118,7 +133,7 @@ public class AiChatServiceImpl implements AiChatService {
     ) {
         log.debug("추가 정보 필요: conversationId={}", session.getConversationId());
 
-        sessionRepository.saveSession(session);  // ⭐ 변경
+        sessionRepository.saveSession(session);
 
         return AiChatResponse.builder()
                 .conversationId(session.getConversationId())
@@ -130,26 +145,17 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     private GeminiRequest buildGeminiRequest(ConversationSession session) {
-        StringBuilder conversationText = new StringBuilder();
-        LocalDate today = LocalDate.now();
+        String template = promptTemplate.loadTemplate(
+                "prompts/transaction-prompt.txt",
+                Map.of("TODAY", LocalDate.now().toString())
+        );
 
-        conversationText.append("당신은 복식부기 가계부 도우미입니다.\n");
-        conversationText.append("사용자의 수입/지출을 자연어로 입력받아 거래 정보를 추출합니다.\n\n");
-        conversationText.append("필수 정보:\n");
-        conversationText.append("1. 거래 타입 (수입/지출)\n");
-        conversationText.append("2. 금액\n");
-        conversationText.append("3. 카테고리 (예: 급여, 식비, 교통비)\n");
-        conversationText.append("4. 결제수단 (예: 현금, 은행, 카드)\n");
-        conversationText.append("5. 날짜 (\"오늘\" 또는 생략 시 오늘 날짜 사용: ").append(today).append(")\n\n");
-        conversationText.append("정보가 부족하면 간단히 질문하세요.\n");
-        conversationText.append("정보가 충분하면 \"COMPLETE:\" 로 시작하여 JSON 형식으로 응답하세요.\n\n");
-        conversationText.append("예시:\n");
-        conversationText.append("- 부족: \"어떤 수입인가요?\"\n");
-        conversationText.append("- 충분: \"COMPLETE: {\\\"type\\\":\\\"EXPENSE\\\",\\\"amount\\\":30000,\\\"category\\\":\\\"식비\\\",\\\"paymentMethod\\\":\\\"체크카드\\\",\\\"date\\\":\\\"").append(today).append("\\\"}\"\n\n");
-        conversationText.append("---대화 시작---\n\n");
-
+        StringBuilder prompt = new StringBuilder(template);
         for (ConversationSession.ChatMessage message : session.getMessages()) {
-            conversationText.append(message.getRole()).append(": ").append(message.getContent()).append("\n");
+            prompt.append(message.getRole())
+                    .append(": ")
+                    .append(message.getContent())
+                    .append("\n");
         }
 
         return GeminiRequest.builder()
@@ -157,7 +163,7 @@ public class AiChatServiceImpl implements AiChatService {
                         GeminiRequest.Content.builder()
                                 .parts(List.of(
                                         GeminiRequest.Part.builder()
-                                                .text(conversationText.toString())
+                                                .text(prompt.toString())
                                                 .build()
                                 ))
                                 .build()

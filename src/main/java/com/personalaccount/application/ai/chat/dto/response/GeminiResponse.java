@@ -10,6 +10,7 @@ import java.util.List;
 public class GeminiResponse {
 
     private List<Candidate> candidates;
+    private UsageMetadata usageMetadata;
 
     @Getter
     @Setter
@@ -27,5 +28,13 @@ public class GeminiResponse {
     @Setter
     public static class Part {
         private String text;
+    }
+
+    @Getter
+    @Setter
+    public static class UsageMetadata {
+        private Integer promptTokenCount;
+        private Integer candidatesTokenCount;
+        private Integer totalTokenCount;
     }
 }

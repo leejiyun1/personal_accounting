@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
@@ -36,33 +37,40 @@ public class GeminiClientImpl implements AiClient {
     }
 
     @Override
-    public GeminiResponse sendMessage(GeminiRequest request) {
+    public Mono<GeminiResponse> sendMessage(GeminiRequest request) {
         log.debug("Gemini API 호출: {}", request);
 
-        try {
-            return webClient.post()
-                    .uri(uriBuilder -> uriBuilder
-                            .queryParam("key", apiKey)
-                            .build())
-                    .header("Content-Type", "application/json")
-                    .bodyValue(request)
-                    .retrieve()
-                    .bodyToMono(GeminiResponse.class)
-                    .timeout(Duration.ofMillis(timeout))
-                    .retryWhen(Retry.backoff(maxRetry, Duration.ofSeconds(1))
-                            .filter(throwable -> throwable instanceof WebClientResponseException.ServiceUnavailable
-                                    || throwable instanceof WebClientResponseException.TooManyRequests)
-                            .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
-                                log.error("Gemini API 재시도 횟수 초과: {}", retrySignal.totalRetries());
-                                throw new AiServiceException("AI 서비스 호출 실패: 재시도 횟수 초과");
-                            }))
-                    .doOnError(error -> log.error("Gemini API 호출 실패", error))
-                    .block();
-        } catch (AiServiceException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Gemini API 호출 실패", e);
-            throw new AiServiceException("AI 서비스 호출에 실패했습니다.", e);
-        }
+        return webClient.post()
+                .uri(uriBuilder -> uriBuilder
+                        .queryParam("key", apiKey)
+                        .build())
+                .header("Content-Type", "application/json")
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(GeminiResponse.class)
+                .timeout(Duration.ofMillis(timeout))
+                .retryWhen(Retry.backoff(maxRetry, Duration.ofSeconds(1))
+                        .filter(throwable ->
+                                throwable instanceof WebClientResponseException.ServiceUnavailable ||
+                                        throwable instanceof WebClientResponseException.TooManyRequests)
+                        .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
+                            log.error("Gemini API 재시도 횟수 초과: {}", retrySignal.totalRetries());
+                            return new AiServiceException("AI 서비스 호출 실패: 재시도 횟수 초과");
+                        }))
+                .doOnSuccess(response -> {
+                    if (response != null && response.getUsageMetadata() != null) {
+                        log.info("Gemini API 토큰 사용량 - input: {}, output: {}, total: {}",
+                                response.getUsageMetadata().getPromptTokenCount(),
+                                response.getUsageMetadata().getCandidatesTokenCount(),
+                                response.getUsageMetadata().getTotalTokenCount());
+                    }
+                })
+                .doOnError(error -> log.error("Gemini API 호출 실패", error))
+                .onErrorMap(throwable -> {
+                    if (throwable instanceof AiServiceException) {
+                        return throwable;
+                    }
+                    return new AiServiceException("AI 서비스 호출에 실패했습니다.", throwable);
+                });
     }
 }
