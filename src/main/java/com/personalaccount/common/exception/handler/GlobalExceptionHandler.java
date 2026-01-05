@@ -3,15 +3,49 @@ package com.personalaccount.common.exception.handler;
 import com.personalaccount.common.dto.CommonResponse;
 import com.personalaccount.common.dto.ResponseFactory;
 import com.personalaccount.common.exception.custom.*;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Slf4j
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    private final Environment environment;
+
+    // === Validation 예외 ===
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<CommonResponse<Map<String, String>>> handleValidationException(
+            MethodArgumentNotValidException ex
+    ) {
+        log.warn("Validation failed: {}", ex.getMessage());
+
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getAllErrors().forEach(error -> {
+            String fieldName = ((FieldError) error).getField();
+            String errorMessage = error.getDefaultMessage();
+            errors.put(fieldName, errorMessage);
+        });
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(CommonResponse.<Map<String, String>>builder()
+                        .success(false)
+                        .data(errors)
+                        .message("입력값 검증 실패")
+                        .build());
+    }
 
     // === Auth 예외 ===
 
@@ -119,7 +153,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(InvalidTransactionException.class)
-    public ResponseEntity<CommonResponse<Void>> handleInvlidTransaction(
+    public ResponseEntity<CommonResponse<Void>> handleInvalidTransaction(
             InvalidTransactionException ex
     ) {
         log.warn("InvalidTransactionException: {}", ex.getMessage());
@@ -160,7 +194,7 @@ public class GlobalExceptionHandler {
                 .body(ResponseFactory.error("AI 응답 처리 중 오류가 발생했습니다. 다시 시도해주세요."));
     }
 
-    // === 모든 예외 ===
+    // === 모든 예외 (환경별 분기) ===
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<CommonResponse<Void>> handleException(
@@ -168,8 +202,23 @@ public class GlobalExceptionHandler {
     ) {
         log.error("Unexpected error: ", ex);
 
+        // 운영 환경에서는 상세 에러 숨김
+        String message = isProdEnvironment()
+                ? "서버 오류가 발생했습니다."
+                : "서버 오류: " + ex.getMessage();
+
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)  // 500
-                .body(ResponseFactory.error("서버 오류가 발생했습니다."));
+                .body(ResponseFactory.error(message));
+    }
+
+    private boolean isProdEnvironment() {
+        String[] profiles = environment.getActiveProfiles();
+        for (String profile : profiles) {
+            if ("prod".equals(profile)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
