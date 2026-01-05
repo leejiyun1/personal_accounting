@@ -48,7 +48,7 @@ public class UserController {
     })
     @GetMapping("/{id}")
     public ResponseEntity<CommonResponse<UserResponse>> getUser(
-            @Parameter(description = "사용자 ID", required = true, example = "1")
+            @Parameter(description = "사용자 ID", example = "1")
             @PathVariable Long id
     ) {
         log.info("GET /api/v1/users/{}", id);
@@ -100,7 +100,7 @@ public class UserController {
     })
     @PutMapping("/{id}")
     public ResponseEntity<CommonResponse<UserResponse>> updateUser(
-            @Parameter(description = "사용자 ID", required = true, example = "1")
+            @Parameter(description = "사용자 ID", example = "1")
             @PathVariable Long id,
             @Valid @RequestBody UserUpdateRequest request
     ) {
@@ -126,7 +126,7 @@ public class UserController {
     })
     @DeleteMapping("/{id}")
     public ResponseEntity<CommonResponse<Void>> deleteUser(
-            @Parameter(description = "사용자 ID", required = true, example = "1")
+            @Parameter(description = "사용자 ID", example = "1")
             @PathVariable Long id
     ) {
         log.info("DELETE /api/v1/users/{}", id);
