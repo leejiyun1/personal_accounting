@@ -24,14 +24,10 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping("/{id}")
-    public ResponseEntity<CommonResponse<UserResponse>> getUser(
-            @PathVariable Long id
-    ) {
-        log.info("사용자 조회 API 호출: id={}", id);
-
+    public ResponseEntity<CommonResponse<UserResponse>> getUser(@PathVariable Long id) {
+        log.info("GET /api/v1/users/{}", id);
         User user = userService.getUser(id);
         UserResponse response = UserMapper.toResponse(user);
-
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
 
@@ -39,13 +35,10 @@ public class UserController {
     public ResponseEntity<CommonResponse<UserResponse>> createUser(
             @Valid @RequestBody UserCreateRequest request
     ) {
-        log.info("회원가입 API 호출: email={}", request.getEmail());
-
+        log.info("POST /api/v1/users");
         User user = userService.createUser(request);
         UserResponse response = UserMapper.toResponse(user);
-
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
+        return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ResponseFactory.success(response, "회원가입 성공"));
     }
 
@@ -54,22 +47,16 @@ public class UserController {
             @PathVariable Long id,
             @Valid @RequestBody UserUpdateRequest request
     ) {
-        log.info("사용자 수정 API 호출: id={}", id);
-
+        log.info("PUT /api/v1/users/{}", id);
         User user = userService.updateUser(id, request);
         UserResponse response = UserMapper.toResponse(user);
-
         return ResponseEntity.ok(ResponseFactory.success(response, "사용자 수정 완료"));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<CommonResponse<Void>> deleteUser(
-            @PathVariable Long id
-    ) {
-        log.info("사용자 삭제 API 호출: id={}", id);
-
+    public ResponseEntity<CommonResponse<Void>> deleteUser(@PathVariable Long id) {
+        log.info("DELETE /api/v1/users/{}", id);
         userService.deleteUser(id);
-
         return ResponseEntity.ok(ResponseFactory.successWithMessage("사용자 삭제 완료"));
     }
 }

@@ -32,13 +32,9 @@ public class TransactionController {
     public ResponseEntity<CommonResponse<TransactionResponse>> createTransaction(
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody TransactionCreateRequest request) {
-
-        log.info("거래 생성 API 호출: userId={}, bookId={}", userId, request.getBookId());
-
+        log.info("POST /api/v1/transactions - userId={}", userId);
         TransactionResponse response = transactionService.createTransaction(userId, request);
-
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
+        return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ResponseFactory.success(response, "거래 생성 완료"));
     }
 
@@ -49,13 +45,9 @@ public class TransactionController {
             @RequestParam(required = false) TransactionType type,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-
-        log.info("거래 목록 조회 API: userId={}, bookId={}, type={}, start={}, end={}",
-                userId, bookId, type, startDate, endDate);
-
+        log.info("GET /api/v1/transactions - userId={}, bookId={}", userId, bookId);
         List<TransactionResponse> response = transactionService.getTransactions(
                 userId, bookId, type, startDate, endDate);
-
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
 
@@ -63,11 +55,8 @@ public class TransactionController {
     public ResponseEntity<CommonResponse<TransactionResponse>> getTransaction(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long id) {
-
-        log.info("거래 상세 조회 API 호출: userId={}, transactionId={}", userId, id);
-
+        log.info("GET /api/v1/transactions/{} - userId={}", id, userId);
         TransactionResponse response = transactionService.getTransaction(userId, id);
-
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
 
@@ -75,11 +64,8 @@ public class TransactionController {
     public ResponseEntity<CommonResponse<TransactionDetailResponse>> getTransactionDetails(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long id) {
-
-        log.info("거래 상세 조회(복식부기 포함) API 호출: userId={}, transactionId={}", userId, id);
-
+        log.info("GET /api/v1/transactions/{}/details - userId={}", id, userId);
         TransactionDetailResponse response = transactionService.getTransactionWithDetails(userId, id);
-
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
 
@@ -88,11 +74,8 @@ public class TransactionController {
             @AuthenticationPrincipal Long userId,
             @PathVariable Long id,
             @Valid @RequestBody TransactionUpdateRequest request) {
-
-        log.info("거래 수정 API 호출: userId={}, transactionId={}", userId, id);
-
+        log.info("PUT /api/v1/transactions/{} - userId={}", id, userId);
         TransactionResponse response = transactionService.updateTransaction(userId, id, request);
-
         return ResponseEntity.ok(ResponseFactory.success(response, "거래 수정 완료"));
     }
 
@@ -100,11 +83,8 @@ public class TransactionController {
     public ResponseEntity<CommonResponse<Void>> deleteTransaction(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long id) {
-
-        log.info("거래 삭제 API 호출: userId={}, transactionId={}", userId, id);
-
+        log.info("DELETE /api/v1/transactions/{} - userId={}", id, userId);
         transactionService.deleteTransaction(userId, id);
-
         return ResponseEntity.ok(ResponseFactory.successWithMessage("거래 삭제 완료"));
     }
 }

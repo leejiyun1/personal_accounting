@@ -25,12 +25,8 @@ public class AiController {
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody AiChatRequest request
     ) {
-        log.info("AI 대화 API 호출: userId={}, bookId={}", userId, request.getBookId());
-
+        log.info("POST /api/v1/ai/chat - userId={}", userId);
         AiChatResponse response = aiChatService.chat(userId, request);
-
-        return ResponseEntity.ok(
-                ResponseFactory.success(response)
-        );
+        return ResponseEntity.ok(ResponseFactory.success(response));
     }
 }

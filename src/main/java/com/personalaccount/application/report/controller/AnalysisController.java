@@ -17,16 +17,13 @@ public class AnalysisController {
 
     private final ReportService reportService;
 
-    /**
-     * AI 경영 분석
-     */
     @GetMapping("/{bookId}")
     public CommonResponse<Map<String, Object>> getAnalysis(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long bookId,
             @RequestParam String yearMonth
     ) {
-        log.info("AI 분석 조회 API: userId={}, bookId={}, yearMonth={}", userId, bookId, yearMonth);
+        log.info("GET /api/v1/analysis/{} - userId={}", bookId, userId);
         Map<String, Object> result = reportService.getAnalysis(userId, bookId, yearMonth);
         return CommonResponse.success(result);
     }

@@ -20,22 +20,16 @@ public class StatisticsController {
 
     private final ReportService reportService;
 
-    /**
-     * 월별 요약 통계 (최근 6개월)
-     */
     @GetMapping("/monthly/{bookId}")
     public CommonResponse<List<MonthlySummary>> getMonthlySummary(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long bookId
     ) {
-        log.info("월별 요약 조회 API: userId={}, bookId={}", userId, bookId);
+        log.info("GET /api/v1/statistics/monthly/{} - userId={}", bookId, userId);
         List<MonthlySummary> result = reportService.getMonthlySummary(userId, bookId);
         return CommonResponse.success(result);
     }
 
-    /**
-     * 카테고리별 통계
-     */
     @GetMapping("/category/{bookId}")
     public CommonResponse<List<CategorySummary>> getCategoryStatistics(
             @AuthenticationPrincipal Long userId,
@@ -43,21 +37,17 @@ public class StatisticsController {
             @RequestParam String yearMonth,
             @RequestParam(defaultValue = "EXPENSE") String type
     ) {
-        log.info("카테고리 통계 조회 API: userId={}, bookId={}, yearMonth={}, type={}",
-                userId, bookId, yearMonth, type);
+        log.info("GET /api/v1/statistics/category/{} - userId={}", bookId, userId);
         List<CategorySummary> result = reportService.getCategoryStatistics(userId, bookId, yearMonth, type);
         return CommonResponse.success(result);
     }
 
-    /**
-     * 계정별 잔액 조회
-     */
     @GetMapping("/balances/{bookId}")
     public CommonResponse<List<AccountBalance>> getAccountBalances(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long bookId
     ) {
-        log.info("계정별 잔액 조회 API: userId={}, bookId={}", userId, bookId);
+        log.info("GET /api/v1/statistics/balances/{} - userId={}", bookId, userId);
         List<AccountBalance> result = reportService.getAccountBalances(userId, bookId);
         return CommonResponse.success(result);
     }

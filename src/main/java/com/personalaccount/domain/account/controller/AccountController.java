@@ -27,13 +27,11 @@ public class AccountController {
     public ResponseEntity<CommonResponse<List<CategoryResponse>>> getIncomeCategories(
             @RequestParam BookType bookType
     ) {
-        log.info("수입 카테고리 조회 API 호출: bookType={}", bookType);
-
+        log.info("GET /api/v1/categories/income - bookType={}", bookType);
         List<Account> accounts = accountService.getIncomeCategories(bookType);
         List<CategoryResponse> response = accounts.stream()
                 .map(AccountMapper::toCategoryResponse)
                 .toList();
-
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
 
@@ -41,13 +39,11 @@ public class AccountController {
     public ResponseEntity<CommonResponse<List<CategoryResponse>>> getExpenseCategories(
             @RequestParam BookType bookType
     ) {
-        log.info("지출 카테고리 조회 API 호출: bookType={}", bookType);
-
+        log.info("GET /api/v1/categories/expense - bookType={}", bookType);
         List<Account> accounts = accountService.getExpenseCategories(bookType);
         List<CategoryResponse> response = accounts.stream()
                 .map(AccountMapper::toCategoryResponse)
                 .toList();
-
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
 
@@ -55,13 +51,11 @@ public class AccountController {
     public ResponseEntity<CommonResponse<List<CategoryResponse>>> getPaymentMethods(
             @RequestParam BookType bookType
     ) {
-        log.info("결제수단 조회 API 호출: bookType={}", bookType);
-
+        log.info("GET /api/v1/categories/payment-methods - bookType={}", bookType);
         List<Account> accounts = accountService.getPaymentMethods(bookType);
         List<CategoryResponse> response = accounts.stream()
                 .map(AccountMapper::toCategoryResponse)
                 .toList();
-
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
 
@@ -69,25 +63,19 @@ public class AccountController {
     public ResponseEntity<CommonResponse<List<AccountResponse>>> getAllAccounts(
             @RequestParam BookType bookType
     ) {
-        log.info("전체 계정과목 조회 API 호출: bookType={}", bookType);
-
+        log.info("GET /api/v1/accounts - bookType={}", bookType);
         List<Account> accounts = accountService.getAllAccounts(bookType);
         List<AccountResponse> response = accounts.stream()
                 .map(AccountMapper::toAccountResponse)
                 .toList();
-
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
 
     @GetMapping("/accounts/{id}")
-    public ResponseEntity<CommonResponse<AccountResponse>> getAccount(
-            @PathVariable Long id
-    ) {
-        log.info("계정과목 상세 조회 API 호출: id={}", id);
-
+    public ResponseEntity<CommonResponse<AccountResponse>> getAccount(@PathVariable Long id) {
+        log.info("GET /api/v1/accounts/{}", id);
         Account account = accountService.getAccountById(id);
         AccountResponse response = AccountMapper.toAccountResponse(account);
-
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
 }

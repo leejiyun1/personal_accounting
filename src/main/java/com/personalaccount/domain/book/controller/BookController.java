@@ -31,13 +31,10 @@ public class BookController {
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody BookCreateRequest request
     ) {
-        log.info("장부 생성 API 호출: userId={}, bookType={}", userId, request.getBookType());
-
+        log.info("POST /api/v1/books - userId={}", userId);
         Book book = bookService.createBook(userId, request);
         BookResponse response = BookMapper.toResponse(book);
-
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
+        return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ResponseFactory.success(response, "장부 생성 완료"));
     }
 
@@ -45,13 +42,11 @@ public class BookController {
     public ResponseEntity<CommonResponse<List<BookResponse>>> getBooks(
             @AuthenticationPrincipal Long userId
     ) {
-        log.info("장부 목록 조회 API 호출: userId={}", userId);
-
+        log.info("GET /api/v1/books - userId={}", userId);
         List<Book> books = bookService.getBooksByUserId(userId);
         List<BookResponse> response = books.stream()
                 .map(BookMapper::toResponse)
                 .toList();
-
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
 
@@ -60,11 +55,9 @@ public class BookController {
             @PathVariable Long id,
             @AuthenticationPrincipal Long userId
     ) {
-        log.info("장부 조회 API 호출: bookId={}, userId={}", id, userId);
-
+        log.info("GET /api/v1/books/{} - userId={}", id, userId);
         Book book = bookService.getBook(id, userId);
         BookResponse response = BookMapper.toResponse(book);
-
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
 
@@ -74,11 +67,9 @@ public class BookController {
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody BookUpdateRequest request
     ) {
-        log.info("장부 수정 API 호출: bookId={}, userId={}", id, userId);
-
+        log.info("PUT /api/v1/books/{} - userId={}", id, userId);
         Book book = bookService.updateBook(id, userId, request);
         BookResponse response = BookMapper.toResponse(book);
-
         return ResponseEntity.ok(ResponseFactory.success(response, "장부 수정 완료"));
     }
 
@@ -87,10 +78,8 @@ public class BookController {
             @PathVariable Long id,
             @AuthenticationPrincipal Long userId
     ) {
-        log.info("장부 삭제 API 호출: bookId={}, userId={}", id, userId);
-
+        log.info("DELETE /api/v1/books/{} - userId={}", id, userId);
         bookService.deleteBook(id, userId);
-
         return ResponseEntity.ok(ResponseFactory.successWithMessage("장부 삭제 완료"));
     }
 }

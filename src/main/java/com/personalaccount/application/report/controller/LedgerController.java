@@ -18,23 +18,17 @@ public class LedgerController {
 
     private final ReportService reportService;
 
-    /**
-     * 재무제표 조회 (손익계산서 + 재무상태표)
-     */
     @GetMapping("/statement/{bookId}")
     public CommonResponse<FinancialStatement> getFinancialStatement(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long bookId,
             @RequestParam String yearMonth
     ) {
-        log.info("재무제표 조회 API: userId={}, bookId={}, yearMonth={}", userId, bookId, yearMonth);
+        log.info("GET /api/v1/ledger/statement/{} - userId={}", bookId, userId);
         FinancialStatement result = reportService.getFinancialStatement(userId, bookId, yearMonth);
         return CommonResponse.success(result);
     }
 
-    /**
-     * 계정별 원장 조회
-     */
     @GetMapping("/account/{bookId}/{accountId}")
     public CommonResponse<Map<String, Object>> getAccountLedger(
             @AuthenticationPrincipal Long userId,
@@ -42,8 +36,7 @@ public class LedgerController {
             @PathVariable Long accountId,
             @RequestParam String yearMonth
     ) {
-        log.info("계정 원장 조회 API: userId={}, bookId={}, accountId={}, yearMonth={}",
-                userId, bookId, accountId, yearMonth);
+        log.info("GET /api/v1/ledger/account/{}/{} - userId={}", bookId, accountId, userId);
         Map<String, Object> result = reportService.getAccountLedger(userId, bookId, accountId, yearMonth);
         return CommonResponse.success(result);
     }
