@@ -1,11 +1,16 @@
 package com.personalaccount.common.ratelimit;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.util.Base64;
 
 @Slf4j
 @Service
@@ -17,18 +22,12 @@ public class RateLimitService {
     private static final int MAX_ATTEMPTS = 5;  // 최대 시도 횟수
     private static final long WINDOW_SIZE_SECONDS = 60;  // 1분 윈도우
 
+    @Getter
+    @RequiredArgsConstructor
     public enum KeyType {
         LOGIN("login");
 
         private final String prefix;
-
-        KeyType(String prefix) {
-            this.prefix = prefix;
-        }
-
-        public String getPrefix() {
-            return prefix;
-        }
     }
 
     /**
@@ -99,6 +98,17 @@ public class RateLimitService {
     }
 
     private String buildKey(KeyType keyType, String identifier) {
-        return "ratelimit:" + keyType.getPrefix() + ":" + identifier;
+        String hashedIdentifier = hashIdentifier(identifier);
+        return "rate_limit:" + keyType.getPrefix() + ":" + hashedIdentifier;
+    }
+
+    private String hashIdentifier(String identifier) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(identifier.getBytes(StandardCharsets.UTF_8));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 not available", e);
+        }
     }
 }
