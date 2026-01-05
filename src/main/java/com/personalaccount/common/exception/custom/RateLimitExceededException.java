@@ -1,12 +1,15 @@
 package com.personalaccount.common.exception.custom;
 
-public class RateLimitExceededException extends RuntimeException {
+import com.personalaccount.common.exception.BusinessException;
+import com.personalaccount.common.exception.ErrorCode;
+
+public class RateLimitExceededException extends BusinessException {
 
     public RateLimitExceededException() {
-        super("요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.");
+        super(ErrorCode.RATE_LIMIT_EXCEEDED);
     }
 
     public RateLimitExceededException(String message) {
-        super(message);
+        super(ErrorCode.RATE_LIMIT_EXCEEDED, message);
     }
 }

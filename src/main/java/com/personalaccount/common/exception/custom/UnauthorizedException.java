@@ -1,12 +1,15 @@
 package com.personalaccount.common.exception.custom;
 
-public class UnauthorizedException extends RuntimeException {
+import com.personalaccount.common.exception.BusinessException;
+import com.personalaccount.common.exception.ErrorCode;
+
+public class UnauthorizedException extends BusinessException {
 
     public UnauthorizedException() {
-        super("인증에 실패했습니다.");
+        super(ErrorCode.UNAUTHORIZED);
     }
 
     public UnauthorizedException(String message) {
-        super(message);
+        super(ErrorCode.UNAUTHORIZED, message);
     }
 }

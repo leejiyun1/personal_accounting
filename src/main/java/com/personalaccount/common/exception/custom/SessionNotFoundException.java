@@ -1,12 +1,15 @@
 package com.personalaccount.common.exception.custom;
 
-public class SessionNotFoundException extends RuntimeException {
+import com.personalaccount.common.exception.BusinessException;
+import com.personalaccount.common.exception.ErrorCode;
+
+public class SessionNotFoundException extends BusinessException {
 
     public SessionNotFoundException() {
-        super("세션을 찾을 수 없습니다.");
+        super(ErrorCode.SESSION_NOT_FOUND);
     }
 
     public SessionNotFoundException(String message) {
-        super(message);
+        super(ErrorCode.SESSION_NOT_FOUND, message);
     }
 }

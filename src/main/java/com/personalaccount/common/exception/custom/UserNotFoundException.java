@@ -1,16 +1,19 @@
 package com.personalaccount.common.exception.custom;
 
-public class UserNotFoundException extends RuntimeException {
+import com.personalaccount.common.exception.BusinessException;
+import com.personalaccount.common.exception.ErrorCode;
+
+public class UserNotFoundException extends BusinessException {
 
     public UserNotFoundException() {
-        super("사용자를 찾을 수 없습니다.");
+        super(ErrorCode.USER_NOT_FOUND);
     }
 
     public UserNotFoundException(String message) {
-        super(message);
+        super(ErrorCode.USER_NOT_FOUND, message);
     }
 
     public UserNotFoundException(Long id) {
-        super("사용자를 찾을 수 없습니다. ID: " + id);
+        super(ErrorCode.USER_NOT_FOUND, "ID: " + id);
     }
 }

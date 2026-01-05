@@ -1,16 +1,19 @@
 package com.personalaccount.common.exception.custom;
 
-public class UnauthorizedBookAccessException extends RuntimeException {
+import com.personalaccount.common.exception.BusinessException;
+import com.personalaccount.common.exception.ErrorCode;
+
+public class UnauthorizedBookAccessException extends BusinessException {
 
     public UnauthorizedBookAccessException() {
-        super("해당 장부에 접근할 권한이 없습니다.");
+        super(ErrorCode.UNAUTHORIZED_BOOK_ACCESS);
     }
 
     public UnauthorizedBookAccessException(String message) {
-        super(message);
+        super(ErrorCode.UNAUTHORIZED_BOOK_ACCESS, message);
     }
 
     public UnauthorizedBookAccessException(Long bookId) {
-        super(String.format("장부(Id: %d)에 접근할 권한이 없습니다.", bookId));
+        super(ErrorCode.UNAUTHORIZED_BOOK_ACCESS, "장부 ID: " + bookId);
     }
 }

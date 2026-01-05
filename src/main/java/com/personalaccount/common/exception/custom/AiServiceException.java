@@ -1,16 +1,19 @@
 package com.personalaccount.common.exception.custom;
 
-public class AiServiceException extends RuntimeException {
+import com.personalaccount.common.exception.BusinessException;
+import com.personalaccount.common.exception.ErrorCode;
+
+public class AiServiceException extends BusinessException {
 
     public AiServiceException() {
-        super("AI 서비스 호출에 실패했습니다.");
+        super(ErrorCode.AI_SERVICE_ERROR);
     }
 
     public AiServiceException(String message) {
-        super(message);
+        super(ErrorCode.AI_SERVICE_ERROR, message);
     }
 
     public AiServiceException(String message, Throwable cause) {
-        super(message, cause);
+        super(ErrorCode.AI_SERVICE_ERROR, message, cause);
     }
 }

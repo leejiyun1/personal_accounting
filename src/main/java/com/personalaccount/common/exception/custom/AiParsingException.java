@@ -1,16 +1,19 @@
 package com.personalaccount.common.exception.custom;
 
-public class AiParsingException extends RuntimeException {
+import com.personalaccount.common.exception.BusinessException;
+import com.personalaccount.common.exception.ErrorCode;
+
+public class AiParsingException extends BusinessException {
 
     public AiParsingException() {
-        super("AI 응답을 파싱할 수 없습니다.");
+        super(ErrorCode.AI_PARSING_ERROR);
     }
 
     public AiParsingException(String message) {
-        super(message);
+        super(ErrorCode.AI_PARSING_ERROR, message);
     }
 
     public AiParsingException(String message, Throwable cause) {
-        super(message, cause);
+        super(ErrorCode.AI_PARSING_ERROR, message, cause);
     }
 }

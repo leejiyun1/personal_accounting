@@ -1,16 +1,19 @@
 package com.personalaccount.common.exception.custom;
 
-public class TransactionNotFoundException extends RuntimeException {
+import com.personalaccount.common.exception.BusinessException;
+import com.personalaccount.common.exception.ErrorCode;
+
+public class TransactionNotFoundException extends BusinessException {
 
     public TransactionNotFoundException() {
-        super("거래를 찾을 수 없습니다.");
+        super(ErrorCode.TRANSACTION_NOT_FOUND);
     }
 
     public TransactionNotFoundException(String message) {
-        super(message);
+        super(ErrorCode.TRANSACTION_NOT_FOUND, message);
     }
 
     public TransactionNotFoundException(Long id) {
-        super("거래를 찾을 수 없습니다. ID: " + id);
+        super(ErrorCode.TRANSACTION_NOT_FOUND, "ID: " + id);
     }
 }

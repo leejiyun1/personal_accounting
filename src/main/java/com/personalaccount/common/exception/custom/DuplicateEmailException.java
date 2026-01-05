@@ -1,16 +1,19 @@
 package com.personalaccount.common.exception.custom;
 
-public class DuplicateEmailException extends RuntimeException {
+import com.personalaccount.common.exception.BusinessException;
+import com.personalaccount.common.exception.ErrorCode;
+
+public class DuplicateEmailException extends BusinessException {
 
     public DuplicateEmailException() {
-        super("이미 사용 중인 이메일입니다.");
+        super(ErrorCode.DUPLICATE_EMAIL);
     }
 
     public DuplicateEmailException(String message) {
-        super(message);
+        super(ErrorCode.DUPLICATE_EMAIL, message);
     }
 
     public DuplicateEmailException(String email, boolean withPrefix) {
-        super("이미 사용 중인 이메일입니다: " + email);
+        super(ErrorCode.DUPLICATE_EMAIL, email);
     }
 }

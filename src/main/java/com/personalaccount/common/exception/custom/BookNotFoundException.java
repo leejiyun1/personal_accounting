@@ -1,16 +1,19 @@
 package com.personalaccount.common.exception.custom;
 
-public class BookNotFoundException extends RuntimeException {
+import com.personalaccount.common.exception.BusinessException;
+import com.personalaccount.common.exception.ErrorCode;
+
+public class BookNotFoundException extends BusinessException {
 
     public BookNotFoundException() {
-        super("장부를 찾을 수 없습니다.");
+        super(ErrorCode.BOOK_NOT_FOUND);
     }
 
     public BookNotFoundException(String message) {
-        super(message);
+        super(ErrorCode.BOOK_NOT_FOUND, message);
     }
 
     public BookNotFoundException(Long id) {
-        super("장부를 찾을 수 없습니다. ID: " + id);
+        super(ErrorCode.BOOK_NOT_FOUND, "ID: " + id);
     }
 }

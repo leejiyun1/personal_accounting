@@ -1,16 +1,19 @@
 package com.personalaccount.common.exception.custom;
 
-public class AccountNotFoundException extends RuntimeException {
+import com.personalaccount.common.exception.BusinessException;
+import com.personalaccount.common.exception.ErrorCode;
+
+public class AccountNotFoundException extends BusinessException {
 
     public AccountNotFoundException() {
-        super("계정과목을 찾을 수 없습니다.");
+        super(ErrorCode.ACCOUNT_NOT_FOUND);
     }
 
     public AccountNotFoundException(String message) {
-        super(message);
+        super(ErrorCode.ACCOUNT_NOT_FOUND, message);
     }
 
     public AccountNotFoundException(Long id) {
-        super("계정과목을 찾을 수 없습니다. ID: " + id);
+        super(ErrorCode.ACCOUNT_NOT_FOUND, "ID: " + id);
     }
 }
