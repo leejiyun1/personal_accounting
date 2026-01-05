@@ -29,8 +29,10 @@ public class AuthController {
 
     @Operation(
             summary = "로그인",
-            description = "이메일과 비밀번호로 로그인하여 JWT 토큰을 발급받습니다.\n\n" +
-                    "**Rate Limit**: 1분당 5회"
+            description = """
+                이메일과 비밀번호로 로그인하여 JWT 토큰을 발급받습니다.
+                **Rate Limit**: 1분당 5회
+                """
     )
     @ApiResponses({
             @ApiResponse(
@@ -58,8 +60,10 @@ public class AuthController {
 
     @Operation(
             summary = "토큰 갱신",
-            description = "Refresh Token으로 새로운 Access Token과 Refresh Token을 발급받습니다.\n\n" +
-                    "**Refresh Token Rotation**: 기존 Refresh Token은 자동으로 무효화됩니다."
+            description = """
+                Refresh Token으로 새로운 Access Token과 Refresh Token을 발급받습니다.
+                **Refresh Token Rotation**: 기존 Refresh Token은 자동으로 무효화됩니다.
+                """
     )
     @ApiResponses({
             @ApiResponse(
