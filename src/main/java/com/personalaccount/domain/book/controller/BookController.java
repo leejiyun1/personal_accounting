@@ -35,6 +35,7 @@ import java.util.List;
 public class BookController {
 
     private final BookService bookService;
+    private final BookMapper bookMapper;
 
     @Operation(
             summary = "장부 생성",
@@ -65,7 +66,7 @@ public class BookController {
     ) {
         log.info("POST /api/v1/books - userId={}", userId);
         Book book = bookService.createBook(userId, request);
-        BookResponse response = BookMapper.toResponse(book);
+        BookResponse response = bookMapper.toResponse(book);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ResponseFactory.success(response, "장부 생성 완료"));
@@ -92,7 +93,7 @@ public class BookController {
         log.info("GET /api/v1/books - userId={}", userId);
         List<Book> books = bookService.getBooksByUserId(userId);
         List<BookResponse> response = books.stream()
-                .map(BookMapper::toResponse)
+                .map(bookMapper::toResponse)
                 .toList();
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
@@ -124,7 +125,7 @@ public class BookController {
     ) {
         log.info("GET /api/v1/books/{} - userId={}", id, userId);
         Book book = bookService.getBook(id, userId);
-        BookResponse response = BookMapper.toResponse(book);
+        BookResponse response = bookMapper.toResponse(book);
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
 
@@ -156,7 +157,7 @@ public class BookController {
     ) {
         log.info("PUT /api/v1/books/{} - userId={}", id, userId);
         Book book = bookService.updateBook(id, userId, request);
-        BookResponse response = BookMapper.toResponse(book);
+        BookResponse response = bookMapper.toResponse(book);
         return ResponseEntity.ok(ResponseFactory.success(response, "장부 수정 완료"));
     }
 

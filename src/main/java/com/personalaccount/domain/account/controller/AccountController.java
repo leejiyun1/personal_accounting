@@ -32,6 +32,7 @@ import java.util.List;
 public class AccountController {
 
     private final AccountService accountService;
+    private final AccountMapper accountMapper;
 
     @Operation(
             summary = "수입 카테고리 조회",
@@ -55,7 +56,7 @@ public class AccountController {
         log.info("GET /api/v1/categories/income - bookType={}", bookType);
         List<Account> accounts = accountService.getIncomeCategories(bookType);
         List<CategoryResponse> response = accounts.stream()
-                .map(AccountMapper::toCategoryResponse)
+                .map(accountMapper::toCategoryResponse)
                 .toList();
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
@@ -82,7 +83,7 @@ public class AccountController {
         log.info("GET /api/v1/categories/expense - bookType={}", bookType);
         List<Account> accounts = accountService.getExpenseCategories(bookType);
         List<CategoryResponse> response = accounts.stream()
-                .map(AccountMapper::toCategoryResponse)
+                .map(accountMapper::toCategoryResponse)
                 .toList();
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
@@ -109,7 +110,7 @@ public class AccountController {
         log.info("GET /api/v1/categories/payment-methods - bookType={}", bookType);
         List<Account> accounts = accountService.getPaymentMethods(bookType);
         List<CategoryResponse> response = accounts.stream()
-                .map(AccountMapper::toCategoryResponse)
+                .map(accountMapper::toCategoryResponse)
                 .toList();
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
@@ -136,7 +137,7 @@ public class AccountController {
         log.info("GET /api/v1/accounts - bookType={}", bookType);
         List<Account> accounts = accountService.getAllAccounts(bookType);
         List<AccountResponse> response = accounts.stream()
-                .map(AccountMapper::toAccountResponse)
+                .map(accountMapper::toAccountResponse)
                 .toList();
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
@@ -163,7 +164,7 @@ public class AccountController {
     ) {
         log.info("GET /api/v1/accounts/{}", id);
         Account account = accountService.getAccountById(id);
-        AccountResponse response = AccountMapper.toAccountResponse(account);
+        AccountResponse response = accountMapper.toAccountResponse(account);
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
 }

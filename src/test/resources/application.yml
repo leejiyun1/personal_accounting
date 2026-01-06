@@ -8,8 +8,11 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
-    defer-datasource-initialization: true
+    defer-datasource-initialization: false
     show-sql: false
+
+  flyway:
+    enabled: false
 
   data:
     redis:

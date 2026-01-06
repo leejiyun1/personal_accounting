@@ -4,7 +4,6 @@ import com.personalaccount.domain.account.constants.DefaultAccounts;
 import com.personalaccount.domain.account.constants.DefaultAccounts.AccountTemplate;
 import com.personalaccount.domain.account.entity.Account;
 import com.personalaccount.domain.account.repository.AccountRepository;
-import com.personalaccount.domain.book.dto.mapper.BookMapper;
 import com.personalaccount.domain.book.dto.request.BookCreateRequest;
 import com.personalaccount.domain.book.dto.request.BookUpdateRequest;
 import com.personalaccount.domain.book.entity.Book;
@@ -50,7 +49,12 @@ public class BookServiceImpl implements BookService {
 
         User user = userRepository.getReferenceById(userId);
 
-        Book book = BookMapper.toEntity(request, user);
+        Book book = Book.builder()
+                .name(request.getName())
+                .bookType(request.getBookType())
+                .user(user)
+                .build();
+
         Book savedBook = bookRepository.save(book);
 
         createDefaultAccounts(savedBook);

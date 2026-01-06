@@ -23,6 +23,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
 
     @Override
     public User getUser(Long id) {
@@ -41,7 +42,7 @@ public class UserServiceImpl implements UserService {
             throw new DuplicateEmailException(request.getEmail());
         }
 
-        User user = UserMapper.toEntity(request);
+        User user = userMapper.toEntity(request);
 
         String encodedPassword = passwordEncoder.encode(user.getPassword());
         user.changePassword(encodedPassword);

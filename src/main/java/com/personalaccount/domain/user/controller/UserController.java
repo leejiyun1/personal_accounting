@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final UserMapper userMapper;
 
     @Operation(
             summary = "사용자 조회",
@@ -53,7 +54,7 @@ public class UserController {
     ) {
         log.info("GET /api/v1/users/{}", id);
         User user = userService.getUser(id);
-        UserResponse response = UserMapper.toResponse(user);
+        UserResponse response = userMapper.toResponse(user);
         return ResponseEntity.ok(ResponseFactory.success(response));
     }
 
@@ -78,7 +79,7 @@ public class UserController {
     ) {
         log.info("POST /api/v1/users");
         User user = userService.createUser(request);
-        UserResponse response = UserMapper.toResponse(user);
+        UserResponse response = userMapper.toResponse(user);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ResponseFactory.success(response, "회원가입 성공"));
     }
@@ -106,7 +107,7 @@ public class UserController {
     ) {
         log.info("PUT /api/v1/users/{}", id);
         User user = userService.updateUser(id, request);
-        UserResponse response = UserMapper.toResponse(user);
+        UserResponse response = userMapper.toResponse(user);
         return ResponseEntity.ok(ResponseFactory.success(response, "사용자 수정 완료"));
     }
 

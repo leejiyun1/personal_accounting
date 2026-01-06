@@ -5,29 +5,19 @@ import com.personalaccount.domain.transaction.dto.response.TransactionResponse;
 import com.personalaccount.domain.transaction.entity.JournalEntry;
 import com.personalaccount.domain.transaction.entity.Transaction;
 import com.personalaccount.domain.transaction.entity.TransactionDetail;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
 
-public class TransactionMapper {
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface TransactionMapper {
 
-    public static TransactionResponse toResponse(Transaction transaction) {
-        if (transaction == null) {
-            return null;
-        }
+    @Mapping(source = "book.id", target = "bookId")
+    TransactionResponse toResponse(Transaction transaction);
 
-        return TransactionResponse.builder()
-                .id(transaction.getId())
-                .bookId(transaction.getBook().getId())
-                .date(transaction.getDate())
-                .type(transaction.getType())
-                .amount(transaction.getAmount())
-                .memo(transaction.getMemo())
-                .createdAt(transaction.getCreatedAt())
-                .updatedAt(transaction.getUpdatedAt())
-                .build();
-    }
-
-    public static TransactionDetailResponse toDetailResponse(
+    default TransactionDetailResponse toDetailResponse(
             Transaction transaction,
             List<JournalEntry> journalEntries,
             List<List<TransactionDetail>> detailsList

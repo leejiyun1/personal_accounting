@@ -40,6 +40,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionDetailRepository transactionDetailRepository;
     private final BookRepository bookRepository;
     private final AccountRepository accountRepository;
+    private final TransactionMapper transactionMapper;
 
     @Transactional
     @Override
@@ -79,7 +80,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         log.info("거래 생성 완료: transactionId={}", savedTransaction.getId());
 
-        return TransactionMapper.toResponse(savedTransaction);
+        return transactionMapper.toResponse(savedTransaction);
     }
 
     @Override
@@ -105,7 +106,7 @@ public class TransactionServiceImpl implements TransactionService {
         List<Transaction> transactions = transactionRepository.searchTransactions(condition);
 
         return transactions.stream()
-                .map(TransactionMapper::toResponse)
+                .map(transactionMapper::toResponse)
                 .toList();
     }
 
@@ -115,7 +116,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         Transaction transaction = getTransactionEntity(userId, id);
 
-        return TransactionMapper.toResponse(transaction);
+        return transactionMapper.toResponse(transaction);
     }
 
     @Override
@@ -144,7 +145,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .map(je -> detailsMap.getOrDefault(je.getId(), List.of()))
                 .toList();
 
-        return TransactionMapper.toDetailResponse(transaction, journalEntries, detailsList);
+        return transactionMapper.toDetailResponse(transaction, journalEntries, detailsList);
     }
 
     @Transactional
@@ -160,7 +161,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         log.info("거래 수정 완료: transactionId={}", id);
 
-        return TransactionMapper.toResponse(transaction);
+        return transactionMapper.toResponse(transaction);
     }
 
     @Transactional
