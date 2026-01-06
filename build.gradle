@@ -71,6 +71,10 @@ dependencies {
 
     // Rate Limiting
     implementation 'com.bucket4j:bucket4j-core:8.10.1'
+
+    // Flyway
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
 }
 
 tasks.named('test') {

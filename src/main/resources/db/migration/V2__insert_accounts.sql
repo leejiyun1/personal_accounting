@@ -1,4 +1,4 @@
--- 개인 장부 (1000번대)
+-- 개인 장부 계정과목
 INSERT INTO accounts (code, name, account_type, book_type, is_active, created_at, updated_at)
 VALUES
     ('1100', '현금', 'PAYMENT_METHOD', 'PERSONAL', true, NOW(), NOW()),
@@ -24,7 +24,7 @@ VALUES
     ('5950', '경조사비', 'EXPENSE', 'PERSONAL', true, NOW(), NOW()),
     ('5999', '기타지출', 'EXPENSE', 'PERSONAL', true, NOW(), NOW());
 
--- 사업 장부 (2000번대)
+-- 사업 장부 계정과목
 INSERT INTO accounts (code, name, account_type, book_type, is_active, created_at, updated_at)
 VALUES
     ('2100', '현금', 'PAYMENT_METHOD', 'BUSINESS', true, NOW(), NOW()),
