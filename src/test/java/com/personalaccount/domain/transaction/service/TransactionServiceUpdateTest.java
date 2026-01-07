@@ -2,6 +2,7 @@ package com.personalaccount.domain.transaction.service;
 
 import com.personalaccount.domain.book.entity.Book;
 import com.personalaccount.domain.book.entity.BookType;
+import com.personalaccount.domain.transaction.dto.mapper.TransactionMapper;
 import com.personalaccount.domain.transaction.dto.request.TransactionUpdateRequest;
 import com.personalaccount.domain.transaction.dto.response.TransactionResponse;
 import com.personalaccount.domain.transaction.entity.Transaction;
@@ -32,12 +33,16 @@ class TransactionServiceUpdateTest {
     @Mock
     private TransactionRepository transactionRepository;
 
+    @Mock
+    private TransactionMapper transactionMapper;
+
     @InjectMocks
     private TransactionServiceImpl transactionService;
 
     private User testUser;
     private Book testBook;
     private Transaction testTransaction;
+    private TransactionResponse testResponse;
 
     @BeforeEach
     void setup() {
@@ -62,6 +67,15 @@ class TransactionServiceUpdateTest {
                 .amount(new BigDecimal("100000"))
                 .memo("원래메모")
                 .build();
+
+        testResponse = TransactionResponse.builder()
+                .id(1L)
+                .bookId(1L)
+                .date(LocalDate.now())
+                .type(TransactionType.INCOME)
+                .amount(new BigDecimal("100000"))
+                .memo("수정된메모")
+                .build();
     }
 
     @Test
@@ -77,6 +91,9 @@ class TransactionServiceUpdateTest {
         given(transactionRepository.findByIdWithBookAndUser(1L))
                 .willReturn(Optional.of(testTransaction));
 
+        given(transactionMapper.toResponse(testTransaction))
+                .willReturn(testResponse);
+
         // When
         TransactionResponse result = transactionService.updateTransaction(userId, transactionId, request);
 
@@ -85,6 +102,7 @@ class TransactionServiceUpdateTest {
         assertThat(result.getMemo()).isEqualTo("수정된메모");
 
         verify(transactionRepository).findByIdWithBookAndUser(1L);
+        verify(transactionMapper).toResponse(testTransaction);
     }
 
     @Test

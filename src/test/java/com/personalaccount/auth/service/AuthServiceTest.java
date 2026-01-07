@@ -158,6 +158,10 @@ class AuthServiceTest {
         given(jwtTokenProvider.getUserId("validRefreshToken")).willReturn(1L);
         given(userRepository.findById(1L)).willReturn(Optional.of(testUser));
         given(jwtTokenProvider.createAccessToken(1L, "test@test.com")).willReturn("newAccessToken");
+        given(jwtTokenProvider.createRefreshToken(1L)).willReturn("newRefreshToken");
+
+        // Redis 모킹 추가
+        given(stringRedisTemplate.opsForValue()).willReturn(valueOperations);
 
         // When
         LoginResponse result = authService.refresh(refreshRequest);
@@ -165,13 +169,15 @@ class AuthServiceTest {
         // Then
         assertThat(result).isNotNull();
         assertThat(result.getAccessToken()).isEqualTo("newAccessToken");
-        assertThat(result.getRefreshToken()).isEqualTo("validRefreshToken");
+        assertThat(result.getRefreshToken()).isEqualTo("newRefreshToken");
         assertThat(result.getUser()).isNotNull();
         assertThat(result.getUser().getId()).isEqualTo(1L);
 
         verify(jwtTokenProvider).validateToken("validRefreshToken");
         verify(jwtTokenProvider).getUserId("validRefreshToken");
         verify(userRepository).findById(1L);
+        verify(jwtTokenProvider).createRefreshToken(1L);
+        verify(valueOperations).set(anyString(), anyString(), anyLong(), eq(TimeUnit.MILLISECONDS));
     }
 
     @Test

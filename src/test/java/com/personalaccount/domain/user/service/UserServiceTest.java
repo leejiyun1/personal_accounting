@@ -2,6 +2,7 @@ package com.personalaccount.domain.user.service;
 
 import com.personalaccount.common.exception.custom.DuplicateEmailException;
 import com.personalaccount.common.exception.custom.UserNotFoundException;
+import com.personalaccount.domain.user.dto.mapper.UserMapper;
 import com.personalaccount.domain.user.dto.request.UserCreateRequest;
 import com.personalaccount.domain.user.dto.request.UserUpdateRequest;
 import com.personalaccount.domain.user.entity.User;
@@ -34,6 +35,9 @@ class UserServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private UserMapper userMapper;
+
     @InjectMocks
     private UserServiceImpl userService;
 
@@ -61,8 +65,15 @@ class UserServiceTest {
     @DisplayName("회원가입_성공_비밀번호암호화확인")
     void createUser_Success() {
         // Given
+        User userBeforeSave = User.builder()
+                .email("test@test.com")
+                .password("password123")
+                .name("테스터")
+                .build();
+
         given(userRepository.existsByEmail(createRequest.getEmail())).willReturn(false);
-        given(passwordEncoder.encode(createRequest.getPassword())).willReturn("encodedPassword");
+        given(userMapper.toEntity(createRequest)).willReturn(userBeforeSave);
+        given(passwordEncoder.encode("password123")).willReturn("encodedPassword");
         given(userRepository.save(any(User.class))).willReturn(testUser);
 
         // When
@@ -74,7 +85,8 @@ class UserServiceTest {
         assertThat(result.getName()).isEqualTo("테스터");
 
         verify(userRepository).existsByEmail(createRequest.getEmail());
-        verify(passwordEncoder).encode(createRequest.getPassword());
+        verify(userMapper).toEntity(createRequest);
+        verify(passwordEncoder).encode("password123");
         verify(userRepository).save(any(User.class));
     }
 

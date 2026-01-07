@@ -3,6 +3,7 @@ package com.personalaccount.domain.transaction.service;
 import com.personalaccount.domain.book.entity.Book;
 import com.personalaccount.domain.book.entity.BookType;
 import com.personalaccount.domain.book.repository.BookRepository;
+import com.personalaccount.domain.transaction.dto.mapper.TransactionMapper;
 import com.personalaccount.domain.transaction.dto.request.TransactionSearchCondition;
 import com.personalaccount.domain.transaction.dto.response.TransactionResponse;
 import com.personalaccount.domain.transaction.entity.Transaction;
@@ -40,6 +41,9 @@ public class TransactionServiceQueryTest {
     @Mock
     private BookRepository bookRepository;
 
+    @Mock
+    private TransactionMapper transactionMapper;
+
     @InjectMocks
     private TransactionServiceImpl transactionService;
 
@@ -49,6 +53,7 @@ public class TransactionServiceQueryTest {
     private User testUser;
     private Book testBook;
     private Transaction testTransaction;
+    private TransactionResponse testResponse;
 
     @BeforeEach
     void setUp() {
@@ -73,6 +78,15 @@ public class TransactionServiceQueryTest {
                 .amount(new BigDecimal("100000"))
                 .memo("테스트거래")
                 .build();
+
+        testResponse = TransactionResponse.builder()
+                .id(1L)
+                .bookId(1L)
+                .date(LocalDate.now())
+                .type(TransactionType.INCOME)
+                .amount(new BigDecimal("100000"))
+                .memo("테스트거래")
+                .build();
     }
 
     @Test
@@ -91,6 +105,9 @@ public class TransactionServiceQueryTest {
         given(transactionRepository.searchTransactions(any(TransactionSearchCondition.class)))
                 .willReturn(List.of(testTransaction));
 
+        given(transactionMapper.toResponse(testTransaction))
+                .willReturn(testResponse);
+
         // When
         List<TransactionResponse> result = transactionService.getTransactions(
                 userId,bookId,type,startDate,endDate);
@@ -103,6 +120,7 @@ public class TransactionServiceQueryTest {
         // Repository 호출 확인
         verify(bookRepository).findByIdAndIsActive(1L, true);
         verify(transactionRepository).searchTransactions(conditionCaptor.capture());
+        verify(transactionMapper).toResponse(testTransaction);
 
         // 검색 조건 확인
         TransactionSearchCondition capturedCondition = conditionCaptor.getValue();
@@ -122,6 +140,9 @@ public class TransactionServiceQueryTest {
         given(transactionRepository.findByIdWithBookAndUser(1L))
                 .willReturn(Optional.of(testTransaction));
 
+        given(transactionMapper.toResponse(testTransaction))
+                .willReturn(testResponse);
+
         // When
         TransactionResponse result = transactionService.getTransaction(userId, transactionId);
 
@@ -132,5 +153,6 @@ public class TransactionServiceQueryTest {
         assertThat(result.getAmount()).isEqualByComparingTo("100000");
 
         verify(transactionRepository).findByIdWithBookAndUser(1L);
+        verify(transactionMapper).toResponse(testTransaction);
     }
 }
