@@ -80,11 +80,6 @@ public class GlobalExceptionHandler {
     private HttpStatus determineHttpStatus(ErrorCode errorCode) {
         String code = errorCode.getCode();
 
-        // NOT_FOUND (404)
-        if (code.endsWith("001")) {
-            return HttpStatus.NOT_FOUND;
-        }
-
         // UNAUTHORIZED (401)
         if (code.startsWith("AUTH")) {
             if (code.equals("AUTH002")) {
@@ -93,14 +88,19 @@ public class GlobalExceptionHandler {
             return HttpStatus.UNAUTHORIZED;
         }
 
+        // SERVICE_UNAVAILABLE (503)
+        if (code.startsWith("AI")) {
+            return HttpStatus.SERVICE_UNAVAILABLE;
+        }
+
         // FORBIDDEN (403)
         if (code.equals("B003")) {  // UNAUTHORIZED_BOOK_ACCESS
             return HttpStatus.FORBIDDEN;
         }
 
-        // SERVICE_UNAVAILABLE (503)
-        if (code.startsWith("AI")) {
-            return HttpStatus.SERVICE_UNAVAILABLE;
+        // NOT_FOUND (404)
+        if (code.endsWith("001")) {
+            return HttpStatus.NOT_FOUND;
         }
 
         // BAD_REQUEST (400) - 기본
