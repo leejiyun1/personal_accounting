@@ -1,5 +1,7 @@
 package com.personalaccount.common.util;
 
+import java.math.BigDecimal;
+
 public class LogMaskingUtil {
 
     /**
@@ -79,5 +81,24 @@ public class LogMaskingUtil {
         }
 
         return parts[0] + "." + parts[1] + ".***. ***";
+    }
+
+    /**
+     * 금액 마스킹
+     * 500000 → 500***
+     * 1000000 → 100***
+     */
+    public static String maskAmount(BigDecimal amount) {
+        if (amount == null) {
+            return "";
+        }
+
+        String str = amount.toString();
+
+        if (str.length() <= 3) {
+            return str + "***";
+        }
+
+        return str.substring(0, 3) + "***";
     }
 }

@@ -3,6 +3,8 @@ package com.personalaccount.common.util;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("LogMaskingUtil 테스트")
@@ -224,5 +226,35 @@ class LogMaskingUtilTest {
     @DisplayName("IP_마스킹_빈문자열_빈문자열_반환")
     void maskIp_Empty_ReturnsEmpty() {
         assertThat(LogMaskingUtil.maskIp("")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("금액_마스킹_정상_6자리")
+    void maskAmount_Normal6Digits() {
+        BigDecimal amount = new BigDecimal("500000");
+        String result = LogMaskingUtil.maskAmount(amount);
+        assertThat(result).isEqualTo("500***");
+    }
+
+    @Test
+    @DisplayName("금액_마스킹_7자리")
+    void maskAmount_7Digits() {
+        BigDecimal amount = new BigDecimal("1000000");
+        String result = LogMaskingUtil.maskAmount(amount);
+        assertThat(result).isEqualTo("100***");
+    }
+
+    @Test
+    @DisplayName("금액_마스킹_3자리_이하")
+    void maskAmount_3Digits() {
+        BigDecimal amount = new BigDecimal("500");
+        String result = LogMaskingUtil.maskAmount(amount);
+        assertThat(result).isEqualTo("500***");
+    }
+
+    @Test
+    @DisplayName("금액_마스킹_null_빈문자열_반환")
+    void maskAmount_Null_ReturnsEmpty() {
+        assertThat(LogMaskingUtil.maskAmount(null)).isEmpty();
     }
 }
