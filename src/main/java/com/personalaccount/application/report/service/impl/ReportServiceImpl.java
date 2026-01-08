@@ -34,7 +34,7 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public List<MonthlySummary> getMonthlySummary(Long userId, Long bookId) {
-        log.info("월별 요약 조회: userId={}, bookId={}", userId, bookId);
+        log.debug("월별 요약 조회: userId={}, bookId={}", userId, bookId);
 
         validateBookAccess(userId, bookId);
 
@@ -94,7 +94,7 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public List<CategorySummary> getCategoryStatistics(Long userId, Long bookId, String yearMonth, String type) {
-        log.info("카테고리별 통계 조회: userId={}, bookId={}, yearMonth={}, type={}",
+        log.debug("카테고리별 통계 조회: userId={}, bookId={}, yearMonth={}, type={}",
                 userId, bookId, yearMonth, type);
 
         validateBookAccess(userId, bookId);
@@ -131,7 +131,7 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public List<AccountBalance> getAccountBalances(Long userId, Long bookId) {
-        log.info("계정별 잔액 조회: userId={}, bookId={}", userId, bookId);
+        log.debug("계정별 잔액 조회: userId={}, bookId={}", userId, bookId);
 
         validateBookAccess(userId, bookId);
 
@@ -170,7 +170,7 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public FinancialStatement getFinancialStatement(Long userId, Long bookId, String yearMonth) {
-        log.info("재무제표 조회: userId={}, bookId={}, yearMonth={}", userId, bookId, yearMonth);
+        log.debug("재무제표 조회: userId={}, bookId={}, yearMonth={}", userId, bookId, yearMonth);
 
         validateBookAccess(userId, bookId);
 
@@ -215,7 +215,7 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public Map<String, Object> getAccountLedger(Long userId, Long bookId, Long accountId, String yearMonth) {
-        log.info("계정 원장 조회: userId={}, bookId={}, accountId={}, yearMonth={}",
+        log.debug("계정 원장 조회: userId={}, bookId={}, accountId={}, yearMonth={}",
                 userId, bookId, accountId, yearMonth);
 
         validateBookAccess(userId, bookId);
@@ -265,7 +265,7 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public Map<String, Object> getAnalysis(Long userId, Long bookId, String yearMonth) {
-        log.info("AI 분석 조회: userId={}, bookId={}, yearMonth={}", userId, bookId, yearMonth);
+        log.debug("AI 분석 조회: userId={}, bookId={}, yearMonth={}", userId, bookId, yearMonth);
 
         validateBookAccess(userId, bookId);
 
