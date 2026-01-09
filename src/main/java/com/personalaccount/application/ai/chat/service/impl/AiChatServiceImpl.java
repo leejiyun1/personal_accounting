@@ -15,6 +15,8 @@ import com.personalaccount.common.exception.custom.AiServiceException;
 import com.personalaccount.common.exception.custom.BookNotFoundException;
 import com.personalaccount.common.exception.custom.SessionNotFoundException;
 import com.personalaccount.common.exception.custom.UnauthorizedBookAccessException;
+import com.personalaccount.domain.account.entity.Account;
+import com.personalaccount.domain.account.entity.AccountType;
 import com.personalaccount.domain.account.repository.AccountRepository;
 import com.personalaccount.domain.ai.client.AiClient;
 import com.personalaccount.domain.ai.repository.SessionRepository;
@@ -145,30 +147,71 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     private GeminiRequest buildGeminiRequest(ConversationSession session) {
-        String template = promptTemplate.loadTemplate(
-                "prompts/transaction-prompt.txt",
-                Map.of("TODAY", LocalDate.now().toString())
-        );
+        // System Instruction (캐싱됨)
+        String systemPrompt = buildSystemPrompt(session.getBookId());
 
-        StringBuilder prompt = new StringBuilder(template);
+        // 대화 내용만 추가
+        StringBuilder conversation = new StringBuilder();
         for (ConversationSession.ChatMessage message : session.getMessages()) {
-            prompt.append(message.getRole())
+            conversation.append(message.getRole())
                     .append(": ")
                     .append(message.getContent())
                     .append("\n");
         }
 
         return GeminiRequest.builder()
-                .contents(List.of(
-                        GeminiRequest.Content.builder()
-                                .parts(List.of(
-                                        GeminiRequest.Part.builder()
-                                                .text(prompt.toString())
-                                                .build()
-                                ))
-                                .build()
-                ))
+                .systemInstruction(GeminiRequest.SystemInstruction.builder()
+                        .parts(List.of(GeminiRequest.Part.builder()
+                                .text(systemPrompt)
+                                .build()))
+                        .build())
+                .contents(List.of(GeminiRequest.Content.builder()
+                        .parts(List.of(GeminiRequest.Part.builder()
+                                .text(conversation.toString())
+                                .build()))
+                        .build()))
                 .build();
+    }
+
+    private String buildSystemPrompt(Long bookId) {
+        Book book = bookRepository.findByIdAndIsActive(bookId, true)
+                .orElseThrow(() -> new BookNotFoundException(bookId));
+
+        BookType bookType = book.getBookType();
+
+        // 수입 카테고리
+        List<String> incomeCategories = accountRepository
+                .findByBookTypeAndAccountTypeAndIsActive(bookType, AccountType.REVENUE, true)
+                .stream()
+                .map(Account::getName)
+                .sorted()
+                .toList();
+
+        // 지출 카테고리
+        List<String> expenseCategories = accountRepository
+                .findByBookTypeAndAccountTypeAndIsActive(bookType, AccountType.EXPENSE, true)
+                .stream()
+                .map(Account::getName)
+                .sorted()
+                .toList();
+
+        // 결제수단
+        List<String> payments = accountRepository
+                .findByBookTypeAndAccountTypeAndIsActive(bookType, AccountType.PAYMENT_METHOD, true)
+                .stream()
+                .map(Account::getName)
+                .sorted()
+                .toList();
+
+        return promptTemplate.loadTemplate(
+                "prompts/transaction-prompt.txt",
+                Map.of(
+                        "TODAY", LocalDate.now().toString(),
+                        "INCOME_CATEGORIES", String.join(", ", incomeCategories),
+                        "EXPENSE_CATEGORIES", String.join(", ", expenseCategories),
+                        "PAYMENTS", String.join(", ", payments)
+                )
+        );
     }
 
     private String extractMessage(GeminiResponse response) {

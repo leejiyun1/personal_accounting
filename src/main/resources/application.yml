@@ -43,7 +43,7 @@ server:
 # AI 설정
 gemini:
   api-key: ${GEMINI_API_KEY}
-  api-url: https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent
+  api-url: ${GEMINI_API_URL}
   timeout: 30000
   max-retry: 3
   connection-timeout: 5000

@@ -57,29 +57,9 @@ public class BookServiceImpl implements BookService {
 
         Book savedBook = bookRepository.save(book);
 
-        createDefaultAccounts(savedBook);
-
         log.info("장부 생성 완료: bookId={}, 기본 계정과목 생성 완료", savedBook.getId());
 
         return savedBook;
-    }
-
-    private void createDefaultAccounts(Book book) {
-        AccountTemplate[] templates = DefaultAccounts.getDefaultAccounts(book.getBookType());
-
-        List<Account> accounts = new ArrayList<>();
-        for (AccountTemplate template : templates) {
-            Account account = Account.builder()
-                    .code(template.code)
-                    .name(template.name)
-                    .accountType(template.accountType)
-                    .bookType(book.getBookType())
-                    .build();
-            accounts.add(account);
-        }
-
-        accountRepository.saveAll(accounts);
-        log.debug("기본 계정과목 {}개 생성 완료", accounts.size());
     }
 
     @Override

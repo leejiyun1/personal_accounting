@@ -9,7 +9,14 @@ import java.util.List;
 @Builder
 public class GeminiRequest {
 
+    private SystemInstruction systemInstruction;
     private List<Content> contents;
+
+    @Getter
+    @Builder
+    public static class SystemInstruction {
+        private List<Part> parts;
+    }
 
     @Getter
     @Builder
