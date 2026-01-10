@@ -3,8 +3,10 @@ package com.personalaccount.application.ai.chat.service.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.personalaccount.application.ai.chat.dto.request.AiChatRequest;
+import com.personalaccount.application.ai.chat.dto.request.CachedContentRequest;
 import com.personalaccount.application.ai.chat.dto.request.GeminiRequest;
 import com.personalaccount.application.ai.chat.dto.response.AiChatResponse;
+import com.personalaccount.application.ai.chat.dto.response.CachedContentResponse;
 import com.personalaccount.application.ai.chat.dto.response.GeminiResponse;
 import com.personalaccount.application.ai.chat.service.AiChatService;
 import com.personalaccount.application.ai.session.ConversationSession;
@@ -29,10 +31,12 @@ import com.personalaccount.domain.transaction.entity.TransactionType;
 import com.personalaccount.domain.transaction.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +53,7 @@ public class AiChatServiceImpl implements AiChatService {
     private final TransactionService transactionService;
     private final AccountRepository accountRepository;
     private final PromptTemplate promptTemplate;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Override
     @Transactional
@@ -147,8 +152,8 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     private GeminiRequest buildGeminiRequest(ConversationSession session) {
-        // System Instruction (캐싱됨)
-        String systemPrompt = buildSystemPrompt(session.getBookId());
+        // BookType별 캐시 ID 가져오기 또는 생성
+        String cachedContentName = getOrCreateCache(session.getBookId());
 
         // 대화 내용만 추가
         StringBuilder conversation = new StringBuilder();
@@ -160,11 +165,7 @@ public class AiChatServiceImpl implements AiChatService {
         }
 
         return GeminiRequest.builder()
-                .systemInstruction(GeminiRequest.SystemInstruction.builder()
-                        .parts(List.of(GeminiRequest.Part.builder()
-                                .text(systemPrompt)
-                                .build()))
-                        .build())
+                .cachedContent(cachedContentName)  // 캐시 참조
                 .contents(List.of(GeminiRequest.Content.builder()
                         .parts(List.of(GeminiRequest.Part.builder()
                                 .text(conversation.toString())
@@ -173,12 +174,52 @@ public class AiChatServiceImpl implements AiChatService {
                 .build();
     }
 
-    private String buildSystemPrompt(Long bookId) {
+    private String getOrCreateCache(Long bookId) {
         Book book = bookRepository.findByIdAndIsActive(bookId, true)
                 .orElseThrow(() -> new BookNotFoundException(bookId));
 
         BookType bookType = book.getBookType();
+        String cacheKey = "gemini:cache:" + bookType;
 
+        // Redis에서 캐시 ID 조회
+        String cachedContentName = redisTemplate.opsForValue().get(cacheKey);
+
+        if (cachedContentName == null) {
+            log.info("BookType {} 캐시 생성 중...", bookType);
+
+            // 캐시 생성
+            String systemPrompt = buildSystemPrompt(bookType);
+
+            CachedContentRequest cacheRequest = CachedContentRequest.builder()
+                    .model("models/gemini-2.5-flash")
+                    .systemInstruction(CachedContentRequest.SystemInstruction.builder()
+                            .parts(List.of(CachedContentRequest.Part.builder()
+                                    .text(systemPrompt)
+                                    .build()))
+                            .build())
+                    .ttl("82800s")  // 23시간
+                    .build();
+
+            CachedContentResponse cacheResponse = aiClient.createCachedContent(cacheRequest).block();
+
+            if (cacheResponse == null) {
+                throw new AiServiceException("캐시 생성 실패");
+            }
+
+            cachedContentName = cacheResponse.getName();
+
+            // Redis 저장
+            redisTemplate.opsForValue().set(cacheKey, cachedContentName, Duration.ofHours(23));
+
+            log.info("BookType {} 캐시 생성 완료: {}", bookType, cachedContentName);
+        } else {
+            log.debug("BookType {} 캐시 재사용: {}", bookType, cachedContentName);
+        }
+
+        return cachedContentName;
+    }
+
+    private String buildSystemPrompt(BookType bookType) {
         // 수입 카테고리
         List<String> incomeCategories = accountRepository
                 .findByBookTypeAndAccountTypeAndIsActive(bookType, AccountType.REVENUE, true)

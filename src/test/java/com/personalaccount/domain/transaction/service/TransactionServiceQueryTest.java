@@ -193,7 +193,7 @@ class TransactionServiceQueryTest {
                 .willReturn(Optional.of(testTransaction));
         given(journalEntryRepository.findByTransactionId(transactionId))
                 .willReturn(List.of(journalEntry));
-        given(transactionDetailRepository.findByJournalEntryIdIn(List.of(1L)))
+        given(transactionDetailRepository.findWithAccountByJournalEntryIdIn(List.of(1L)))
                 .willReturn(List.of(debitDetail, creditDetail));
         given(transactionMapper.toDetailResponse(
                 testTransaction,
@@ -208,6 +208,6 @@ class TransactionServiceQueryTest {
 
         verify(transactionRepository).findByIdWithBookAndUser(transactionId);
         verify(journalEntryRepository).findByTransactionId(transactionId);
-        verify(transactionDetailRepository).findByJournalEntryIdIn(List.of(1L));
+        verify(transactionDetailRepository).findWithAccountByJournalEntryIdIn(List.of(1L));
     }
 }

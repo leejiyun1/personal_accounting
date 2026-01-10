@@ -2,16 +2,32 @@ package com.personalaccount.domain.transaction.repository;
 
 import com.personalaccount.domain.transaction.entity.TransactionDetail;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
 public interface TransactionDetailRepository extends JpaRepository<TransactionDetail, Long> {
-    List<TransactionDetail> findByJournalEntryId(Long journalEntryId);
 
-    /**
-     * 여러 분개의 상세 내역을 한 번에 조회 (N+1 방지)
-     */
-    List<TransactionDetail> findByJournalEntryIdIn(List<Long> journalEntryIds);
+    @Query("""
+        select td
+        from TransactionDetail td
+        join fetch td.account
+        where td.journalEntry.id = :journalEntryId
+    """)
+    List<TransactionDetail> findWithAccountByJournalEntryId(
+            @Param("journalEntryId") Long journalEntryId
+    );
+
+    @Query("""
+        select td
+        from TransactionDetail td
+        join fetch td.account
+        where td.journalEntry.id in :journalEntryIds
+    """)
+    List<TransactionDetail> findWithAccountByJournalEntryIdIn(
+            @Param("journalEntryIds") List<Long> journalEntryIds
+    );
 }

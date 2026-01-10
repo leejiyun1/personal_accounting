@@ -7,21 +7,14 @@ import java.util.List;
 
 @Getter
 @Builder
-public class GeminiRequest {
-
-    private String cachedContent;
+public class CachedContentRequest {
+    private String model;
     private SystemInstruction systemInstruction;
-    private List<Content> contents;
+    private String ttl;
 
     @Getter
     @Builder
     public static class SystemInstruction {
-        private List<Part> parts;
-    }
-
-    @Getter
-    @Builder
-    public static class Content {
         private List<Part> parts;
     }
 

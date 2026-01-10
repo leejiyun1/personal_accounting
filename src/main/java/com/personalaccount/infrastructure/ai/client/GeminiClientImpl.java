@@ -1,6 +1,8 @@
 package com.personalaccount.infrastructure.ai.client;
 
+import com.personalaccount.application.ai.chat.dto.request.CachedContentRequest;
 import com.personalaccount.application.ai.chat.dto.request.GeminiRequest;
+import com.personalaccount.application.ai.chat.dto.response.CachedContentResponse;
 import com.personalaccount.application.ai.chat.dto.response.GeminiResponse;
 import com.personalaccount.common.exception.custom.AiServiceException;
 import com.personalaccount.domain.ai.client.AiClient;
@@ -20,6 +22,7 @@ public class GeminiClientImpl implements AiClient {
 
     private final WebClient webClient;
     private final String apiKey;
+    private final String cacheUrl;
     private final int maxRetry;
     private final long timeout;
 
@@ -27,11 +30,13 @@ public class GeminiClientImpl implements AiClient {
             WebClient.Builder webClientBuilder,
             @Value("${gemini.api-key}") String apiKey,
             @Value("${gemini.api-url}") String apiUrl,
+            @Value("${gemini.cache-url}") String cacheUrl,
             @Value("${gemini.max-retry:3}") int maxRetry,
             @Value("${gemini.timeout:30000}") long timeout
     ) {
         this.webClient = webClientBuilder.baseUrl(apiUrl).build();
         this.apiKey = apiKey;
+        this.cacheUrl = cacheUrl;
         this.maxRetry = maxRetry;
         this.timeout = timeout;
     }
@@ -72,5 +77,32 @@ public class GeminiClientImpl implements AiClient {
                     }
                     return new AiServiceException("AI 서비스 호출에 실패했습니다.", throwable);
                 });
+    }
+
+    @Override
+    public Mono<CachedContentResponse> createCachedContent(CachedContentRequest request) {
+        log.info("Gemini 캐시 생성 시작: {}", request);
+
+        return WebClient.create(cacheUrl)
+                .post()
+                .uri(uriBuilder -> uriBuilder
+                        .queryParam("key", apiKey)
+                        .build())
+                .header("Content-Type", "application/json")
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(CachedContentResponse.class)
+                .timeout(Duration.ofMillis(timeout))
+                .doOnSuccess(response -> log.info("Gemini 캐시 생성 완료: {}", response.getName()))
+                .doOnError(error -> {
+                    if (error instanceof WebClientResponseException) {
+                        WebClientResponseException ex = (WebClientResponseException) error;
+                        log.error("Gemini 캐시 생성 실패 - Status: {}, Body: {}",
+                                ex.getStatusCode(), ex.getResponseBodyAsString());
+                    } else {
+                        log.error("Gemini 캐시 생성 실패", error);
+                    }
+                })
+                .onErrorMap(throwable -> new AiServiceException("캐시 생성에 실패했습니다.", throwable));
     }
 }

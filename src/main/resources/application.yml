@@ -44,6 +44,7 @@ server:
 gemini:
   api-key: ${GEMINI_API_KEY}
   api-url: ${GEMINI_API_URL}
+  cache-url: ${GEMINI_CACHE_URL}
   timeout: 30000
   max-retry: 3
   connection-timeout: 5000

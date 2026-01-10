@@ -132,7 +132,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .toList();
 
         List<TransactionDetail> allDetails = transactionDetailRepository
-                .findByJournalEntryIdIn(journalEntryIds);
+                .findWithAccountByJournalEntryIdIn(journalEntryIds);
 
         // JournalEntry별로 그룹화
         Map<Long, List<TransactionDetail>> detailsMap = allDetails.stream()
