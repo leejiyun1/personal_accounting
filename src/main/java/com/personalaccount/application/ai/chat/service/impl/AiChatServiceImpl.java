@@ -58,7 +58,7 @@ public class AiChatServiceImpl implements AiChatService {
     @Override
     @Transactional
     public AiChatResponse chat(Long userId, AiChatRequest request) {
-        log.info("AI 대화 요청: userId={}, bookId={}", userId, request.getBookId());
+        log.info("AI 대화 시작 - userId: {}, bookId: {}", userId, request.getBookId());
 
         validateBookAccess(userId, request.getBookId());
 
@@ -71,19 +71,10 @@ public class AiChatServiceImpl implements AiChatService {
         session.addMessage("user", request.getMessage());
 
         GeminiRequest geminiRequest = buildGeminiRequest(session);
-
-        GeminiResponse geminiResponse = aiClient.sendMessage(geminiRequest)
-                .block();
+        GeminiResponse geminiResponse = aiClient.sendMessage(geminiRequest).block();
 
         if (geminiResponse == null) {
             throw new AiServiceException("AI 응답이 비어있습니다");
-        }
-
-        // 토큰 사용량 로깅
-        if (geminiResponse.getUsageMetadata() != null) {
-            log.info("대화 세션 {} - 토큰 사용: {}",
-                    session.getConversationId(),
-                    geminiResponse.getUsageMetadata().getTotalTokenCount());
         }
 
         String aiMessage = extractMessage(geminiResponse);
@@ -96,6 +87,15 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
+    private void validateBookAccess(Long userId, Long bookId) {
+        Book book = bookRepository.findByIdAndIsActive(bookId, true)
+                .orElseThrow(() -> new BookNotFoundException(bookId));
+
+        if (!book.getUser().getId().equals(userId)) {
+            throw new UnauthorizedBookAccessException(bookId);
+        }
+    }
+
     private ConversationSession getOrCreateSession(
             String conversationId,
             Long userId,
@@ -103,59 +103,18 @@ public class AiChatServiceImpl implements AiChatService {
     ) {
         if (conversationId == null || conversationId.isEmpty()) {
             return sessionRepository.createSession(userId, bookId);
-        } else {
-            ConversationSession session = sessionRepository.getSession(conversationId);
-            if (session == null) {
-                throw new SessionNotFoundException("세션을 찾을 수 없습니다. conversationId: " + conversationId);
-            }
-            return session;
         }
-    }
 
-    private AiChatResponse handleCompleteTransaction(
-            Long userId,
-            ConversationSession session,
-            String aiMessage
-    ) {
-        log.info("거래 생성: conversationId={}", session.getConversationId());
-
-        TransactionCreateRequest transactionRequest = parseTransactionFromAi(aiMessage, session);
-
-        TransactionResponse transactionResponse = transactionService.createTransaction(userId, transactionRequest);
-
-        sessionRepository.deleteSession(session.getConversationId());
-
-        return AiChatResponse.builder()
-                .conversationId(null)
-                .needsMoreInfo(false)
-                .message("거래가 생성되었습니다!")
-                .suggestions(null)
-                .transaction(transactionResponse)
-                .build();
-    }
-
-    private AiChatResponse handleMoreInfoNeeded(
-            ConversationSession session,
-            String aiMessage
-    ) {
-        log.debug("추가 정보 필요: conversationId={}", session.getConversationId());
-
-        sessionRepository.saveSession(session);
-
-        return AiChatResponse.builder()
-                .conversationId(session.getConversationId())
-                .needsMoreInfo(true)
-                .message(aiMessage)
-                .suggestions(null)
-                .transaction(null)
-                .build();
+        ConversationSession session = sessionRepository.getSession(conversationId);
+        if (session == null) {
+            throw new SessionNotFoundException("세션을 찾을 수 없습니다. conversationId: " + conversationId);
+        }
+        return session;
     }
 
     private GeminiRequest buildGeminiRequest(ConversationSession session) {
-        // BookType별 캐시 ID 가져오기 또는 생성
         String cachedContentName = getOrCreateCache(session.getBookId());
 
-        // 대화 내용만 추가
         StringBuilder conversation = new StringBuilder();
         for (ConversationSession.ChatMessage message : session.getMessages()) {
             conversation.append(message.getRole())
@@ -165,7 +124,7 @@ public class AiChatServiceImpl implements AiChatService {
         }
 
         return GeminiRequest.builder()
-                .cachedContent(cachedContentName)  // 캐시 참조
+                .cachedContent(cachedContentName)
                 .contents(List.of(GeminiRequest.Content.builder()
                         .parts(List.of(GeminiRequest.Part.builder()
                                 .text(conversation.toString())
@@ -181,46 +140,45 @@ public class AiChatServiceImpl implements AiChatService {
         BookType bookType = book.getBookType();
         String cacheKey = "gemini:cache:" + bookType;
 
-        // Redis에서 캐시 ID 조회
         String cachedContentName = redisTemplate.opsForValue().get(cacheKey);
 
         if (cachedContentName == null) {
-            log.info("BookType {} 캐시 생성 중...", bookType);
-
-            // 캐시 생성
-            String systemPrompt = buildSystemPrompt(bookType);
-
-            CachedContentRequest cacheRequest = CachedContentRequest.builder()
-                    .model("models/gemini-2.5-flash")
-                    .systemInstruction(CachedContentRequest.SystemInstruction.builder()
-                            .parts(List.of(CachedContentRequest.Part.builder()
-                                    .text(systemPrompt)
-                                    .build()))
-                            .build())
-                    .ttl("82800s")  // 23시간
-                    .build();
-
-            CachedContentResponse cacheResponse = aiClient.createCachedContent(cacheRequest).block();
-
-            if (cacheResponse == null) {
-                throw new AiServiceException("캐시 생성 실패");
-            }
-
-            cachedContentName = cacheResponse.getName();
-
-            // Redis 저장
-            redisTemplate.opsForValue().set(cacheKey, cachedContentName, Duration.ofHours(23));
-
-            log.info("BookType {} 캐시 생성 완료: {}", bookType, cachedContentName);
-        } else {
-            log.debug("BookType {} 캐시 재사용: {}", bookType, cachedContentName);
+            cachedContentName = createCache(bookType, cacheKey);
         }
 
         return cachedContentName;
     }
 
+    private String createCache(BookType bookType, String cacheKey) {
+        log.info("캐시 생성 - bookType: {}", bookType);
+
+        String systemPrompt = buildSystemPrompt(bookType);
+
+        CachedContentRequest cacheRequest = CachedContentRequest.builder()
+                .model("models/gemini-2.5-flash")
+                .systemInstruction(CachedContentRequest.SystemInstruction.builder()
+                        .parts(List.of(CachedContentRequest.Part.builder()
+                                .text(systemPrompt)
+                                .build()))
+                        .build())
+                .ttl("82800s")
+                .build();
+
+        CachedContentResponse cacheResponse = aiClient.createCachedContent(cacheRequest).block();
+
+        if (cacheResponse == null) {
+            throw new AiServiceException("캐시 생성 실패");
+        }
+
+        String cachedContentName = cacheResponse.getName();
+        redisTemplate.opsForValue().set(cacheKey, cachedContentName, Duration.ofHours(23));
+
+        log.info("캐시 생성 완료 - bookType: {}, name: {}", bookType, cachedContentName);
+
+        return cachedContentName;
+    }
+
     private String buildSystemPrompt(BookType bookType) {
-        // 수입 카테고리
         List<String> incomeCategories = accountRepository
                 .findByBookTypeAndAccountTypeAndIsActive(bookType, AccountType.REVENUE, true)
                 .stream()
@@ -228,7 +186,6 @@ public class AiChatServiceImpl implements AiChatService {
                 .sorted()
                 .toList();
 
-        // 지출 카테고리
         List<String> expenseCategories = accountRepository
                 .findByBookTypeAndAccountTypeAndIsActive(bookType, AccountType.EXPENSE, true)
                 .stream()
@@ -236,7 +193,6 @@ public class AiChatServiceImpl implements AiChatService {
                 .sorted()
                 .toList();
 
-        // 결제수단
         List<String> payments = accountRepository
                 .findByBookTypeAndAccountTypeAndIsActive(bookType, AccountType.PAYMENT_METHOD, true)
                 .stream()
@@ -266,6 +222,42 @@ public class AiChatServiceImpl implements AiChatService {
         return message.startsWith("COMPLETE:");
     }
 
+    private AiChatResponse handleCompleteTransaction(
+            Long userId,
+            ConversationSession session,
+            String aiMessage
+    ) {
+        log.info("거래 생성 - conversationId: {}", session.getConversationId());
+
+        TransactionCreateRequest transactionRequest = parseTransactionFromAi(aiMessage, session);
+        TransactionResponse transactionResponse = transactionService.createTransaction(userId, transactionRequest);
+
+        sessionRepository.deleteSession(session.getConversationId());
+
+        return AiChatResponse.builder()
+                .conversationId(null)
+                .needsMoreInfo(false)
+                .message("거래가 생성되었습니다!")
+                .suggestions(null)
+                .transaction(transactionResponse)
+                .build();
+    }
+
+    private AiChatResponse handleMoreInfoNeeded(
+            ConversationSession session,
+            String aiMessage
+    ) {
+        sessionRepository.saveSession(session);
+
+        return AiChatResponse.builder()
+                .conversationId(session.getConversationId())
+                .needsMoreInfo(true)
+                .message(aiMessage)
+                .suggestions(null)
+                .transaction(null)
+                .build();
+    }
+
     private TransactionCreateRequest parseTransactionFromAi(
             String aiMessage,
             ConversationSession session
@@ -276,10 +268,7 @@ public class AiChatServiceImpl implements AiChatService {
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode jsonNode = objectMapper.readTree(jsonString);
 
-            if (!jsonNode.has("type") || !jsonNode.has("amount") ||
-                    !jsonNode.has("category") || !jsonNode.has("paymentMethod")) {
-                throw new AiParsingException("AI 응답에 필수 필드가 누락되었습니다: " + jsonString);
-            }
+            validateRequiredFields(jsonNode, jsonString);
 
             String type = jsonNode.get("type").asText();
             BigDecimal amount = new BigDecimal(jsonNode.get("amount").asText());
@@ -316,20 +305,18 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
+    private void validateRequiredFields(JsonNode jsonNode, String jsonString) {
+        if (!jsonNode.has("type") || !jsonNode.has("amount") ||
+                !jsonNode.has("category") || !jsonNode.has("paymentMethod")) {
+            throw new AiParsingException("AI 응답에 필수 필드가 누락되었습니다: " + jsonString);
+        }
+    }
+
     private Long findAccountIdByName(String name, BookType bookType) {
         return accountRepository.findByNameAndBookTypeAndIsActive(name, bookType, true)
                 .orElseThrow(() -> new AccountNotFoundException(
                         String.format("계정과목을 찾을 수 없습니다. Name: %s, BookType: %s", name, bookType)
                 ))
                 .getId();
-    }
-
-    private void validateBookAccess(Long userId, Long bookId) {
-        Book book = bookRepository.findByIdAndIsActive(bookId, true)
-                .orElseThrow(() -> new BookNotFoundException(bookId));
-
-        if (!book.getUser().getId().equals(userId)) {
-            throw new UnauthorizedBookAccessException(bookId);
-        }
     }
 }

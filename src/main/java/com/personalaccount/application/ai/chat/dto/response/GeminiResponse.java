@@ -36,5 +36,6 @@ public class GeminiResponse {
         private Integer promptTokenCount;
         private Integer candidatesTokenCount;
         private Integer totalTokenCount;
+        private Integer cachedContentTokenCount;
     }
 }

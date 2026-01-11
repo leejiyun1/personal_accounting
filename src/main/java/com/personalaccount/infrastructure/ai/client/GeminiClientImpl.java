@@ -43,8 +43,6 @@ public class GeminiClientImpl implements AiClient {
 
     @Override
     public Mono<GeminiResponse> sendMessage(GeminiRequest request) {
-        log.debug("Gemini API 호출: {}", request);
-
         return webClient.post()
                 .uri(uriBuilder -> uriBuilder
                         .queryParam("key", apiKey)
@@ -64,10 +62,9 @@ public class GeminiClientImpl implements AiClient {
                         }))
                 .doOnSuccess(response -> {
                     if (response != null && response.getUsageMetadata() != null) {
-                        log.info("Gemini API 토큰 사용량 - input: {}, output: {}, total: {}",
-                                response.getUsageMetadata().getPromptTokenCount(),
-                                response.getUsageMetadata().getCandidatesTokenCount(),
-                                response.getUsageMetadata().getTotalTokenCount());
+                        log.info("토큰 사용량 - total: {}, cached: {}",
+                                response.getUsageMetadata().getTotalTokenCount(),
+                                response.getUsageMetadata().getCachedContentTokenCount());
                     }
                 })
                 .doOnError(error -> log.error("Gemini API 호출 실패", error))
@@ -81,7 +78,7 @@ public class GeminiClientImpl implements AiClient {
 
     @Override
     public Mono<CachedContentResponse> createCachedContent(CachedContentRequest request) {
-        log.info("Gemini 캐시 생성 시작: {}", request);
+        log.info("캐시 생성 시작");
 
         return WebClient.create(cacheUrl)
                 .post()
@@ -93,14 +90,13 @@ public class GeminiClientImpl implements AiClient {
                 .retrieve()
                 .bodyToMono(CachedContentResponse.class)
                 .timeout(Duration.ofMillis(timeout))
-                .doOnSuccess(response -> log.info("Gemini 캐시 생성 완료: {}", response.getName()))
+                .doOnSuccess(response -> log.info("캐시 생성 완료: {}", response.getName()))
                 .doOnError(error -> {
-                    if (error instanceof WebClientResponseException) {
-                        WebClientResponseException ex = (WebClientResponseException) error;
-                        log.error("Gemini 캐시 생성 실패 - Status: {}, Body: {}",
+                    if (error instanceof WebClientResponseException ex) {
+                        log.error("캐시 생성 실패 - Status: {}, Body: {}",
                                 ex.getStatusCode(), ex.getResponseBodyAsString());
                     } else {
-                        log.error("Gemini 캐시 생성 실패", error);
+                        log.error("캐시 생성 실패", error);
                     }
                 })
                 .onErrorMap(throwable -> new AiServiceException("캐시 생성에 실패했습니다.", throwable));
