@@ -2,12 +2,14 @@ package com.personalaccount.auth.jwt;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Date;
 
 @Slf4j
@@ -16,6 +18,7 @@ public class JwtTokenProvider {
 
     private final SecretKey secretKey;
     private final long accessTokenValidityInMilliseconds;
+    @Getter
     private final long refreshTokenValidityInMilliseconds;
 
     public JwtTokenProvider(
@@ -28,7 +31,6 @@ public class JwtTokenProvider {
         this.refreshTokenValidityInMilliseconds = refreshTokenValidity;
     }
 
-    // Access Token 생성
     public String createAccessToken(Long userId, String email) {
         Date now = new Date();
         Date validity = new Date(now.getTime() + accessTokenValidityInMilliseconds);
@@ -43,7 +45,6 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    // Refresh Token 생성
     public String createRefreshToken(Long userId) {
         Date now = new Date();
         Date validity = new Date(now.getTime() + refreshTokenValidityInMilliseconds);
@@ -57,7 +58,6 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    // 토큰에서 userId 추출
     public Long getUserId(String token) {
         return Long.parseLong(
                 Jwts.parser()
@@ -69,7 +69,18 @@ public class JwtTokenProvider {
         );
     }
 
-    // 토큰 검증
+    /**
+     * 토큰 타입 조회 (access / refresh)
+     */
+    public String getTokenType(String token) {
+        return Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("type", String.class);
+    }
+
     public boolean validateToken(String token) {
         try {
             Jwts.parser()
@@ -83,9 +94,6 @@ public class JwtTokenProvider {
         }
     }
 
-    /**
-     * 토큰 남은 유효시간 반환 (밀리초)
-     */
     public long getExpiration(String token) {
         try {
             Date expiration = Jwts.parser()
@@ -96,10 +104,17 @@ public class JwtTokenProvider {
                     .getExpiration();
 
             long now = System.currentTimeMillis();
-            return Math.max(0, expiration.getTime() - now);  // 음수 방지
+            return Math.max(0, expiration.getTime() - now);
         } catch (JwtException | IllegalArgumentException e) {
             log.error("토큰 만료시간 추출 실패: {}", e.getMessage());
-            return 0;  // 실패 시 즉시 만료 처리
+            return 0;
         }
+    }
+
+    /**
+     * Refresh Token TTL (Duration)
+     */
+    public Duration getRefreshTokenTtl() {
+        return Duration.ofMillis(refreshTokenValidityInMilliseconds);
     }
 }

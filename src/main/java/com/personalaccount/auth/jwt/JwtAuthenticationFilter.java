@@ -33,10 +33,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         try {
-            // Authorization 헤더에서 토큰 추출
             String token = extractToken(request);
 
-            // 토큰이 있고 유효하면 인증 정보 설정
             if (token != null && jwtTokenProvider.validateToken(token)) {
 
                 // 블랙리스트 체크
@@ -46,9 +44,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     return;
                 }
 
+                // Access Token 타입 검증
+                String tokenType = jwtTokenProvider.getTokenType(token);
+                if (!"access".equals(tokenType)) {
+                    log.warn("Access Token이 아닌 토큰으로 접근 시도: type={}", tokenType);
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
                 Long userId = jwtTokenProvider.getUserId(token);
 
-                // Spring Security Context에 인증 정보 저장
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 userId,
@@ -67,7 +72,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    // Authorization 헤더에서 Bearer 토큰 추출
     private String extractToken(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
@@ -76,7 +80,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return null;
     }
 
-    // 블랙리스트 체크
     private boolean isBlacklisted(String token) {
         Boolean exists = stringRedisTemplate.hasKey("blacklist:" + token);
         return exists != null && exists;
