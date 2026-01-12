@@ -1,6 +1,5 @@
-package com.personalaccount.auth.jwt;
+package com.personalaccount.infrastructure.security.jwt;
 
-import com.personalaccount.infrastructure.security.jwt.JwtTokenProvider;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.BeforeEach;

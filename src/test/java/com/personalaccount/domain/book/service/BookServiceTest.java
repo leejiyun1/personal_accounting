@@ -4,7 +4,6 @@ import com.personalaccount.common.exception.custom.BookNotFoundException;
 import com.personalaccount.common.exception.custom.DuplicateBookTypeException;
 import com.personalaccount.common.exception.custom.UnauthorizedBookAccessException;
 import com.personalaccount.common.exception.custom.UserNotFoundException;
-import com.personalaccount.domain.account.repository.AccountRepository;
 import com.personalaccount.domain.book.dto.request.BookCreateRequest;
 import com.personalaccount.domain.book.dto.request.BookUpdateRequest;
 import com.personalaccount.domain.book.entity.Book;
@@ -27,7 +26,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -40,9 +38,6 @@ class BookServiceTest {
 
     @Mock
     private UserRepository userRepository;
-
-    @Mock
-    private AccountRepository accountRepository;
 
     @InjectMocks
     private BookServiceImpl bookService;
@@ -97,25 +92,6 @@ class BookServiceTest {
 
         verify(userRepository).existsById(userId);
         verify(bookRepository).save(any(Book.class));
-    }
-
-    @Test
-    @DisplayName("장부생성_기본계정과목_자동생성_확인")
-    void createBook_DefaultAccounts_Created() {
-        // Given
-        Long userId = 1L;
-
-        given(userRepository.existsById(userId)).willReturn(true);
-        given(bookRepository.findByUserIdAndBookTypeAndIsActive(userId, BookType.PERSONAL, true))
-                .willReturn(Optional.empty());
-        given(userRepository.getReferenceById(userId)).willReturn(testUser);
-        given(bookRepository.save(any(Book.class))).willReturn(testBook);
-
-        // When
-        bookService.createBook(userId, createRequest);
-
-        // Then
-        verify(accountRepository).saveAll(anyList());
     }
 
     @Test

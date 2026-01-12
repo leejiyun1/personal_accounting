@@ -1,9 +1,10 @@
-package com.personalaccount.auth.service;
+package com.personalaccount.application.auth.service;
 
 import com.personalaccount.application.auth.dto.request.LoginRequest;
 import com.personalaccount.application.auth.dto.request.RefreshRequest;
 import com.personalaccount.application.auth.dto.response.LoginResponse;
 import com.personalaccount.infrastructure.security.jwt.JwtTokenProvider;
+import com.personalaccount.infrastructure.security.repository.RefreshTokenRepository;
 import com.personalaccount.application.auth.service.impl.AuthServiceImpl;
 import com.personalaccount.common.exception.custom.UnauthorizedException;
 import com.personalaccount.common.ratelimit.RateLimitService;
@@ -20,6 +21,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -51,6 +53,9 @@ class AuthServiceTest {
     @Mock
     private ValueOperations<String, String> valueOperations;
 
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+
     @InjectMocks
     private AuthServiceImpl authService;
 
@@ -67,7 +72,6 @@ class AuthServiceTest {
                 .isActive(true)
                 .build();
 
-        // LoginRequest 설정 (Reflection 사용)
         loginRequest = new LoginRequest();
         try {
             java.lang.reflect.Field emailField = LoginRequest.class.getDeclaredField("email");
@@ -91,6 +95,7 @@ class AuthServiceTest {
         given(passwordEncoder.matches(anyString(), anyString())).willReturn(true);
         given(jwtTokenProvider.createAccessToken(anyLong(), anyString())).willReturn("accessToken");
         given(jwtTokenProvider.createRefreshToken(anyLong())).willReturn("refreshToken");
+        given(jwtTokenProvider.getRefreshTokenTtl()).willReturn(Duration.ofMillis(604800000L));
 
         // When
         LoginResponse result = authService.login(loginRequest);
@@ -107,6 +112,7 @@ class AuthServiceTest {
         verify(passwordEncoder).matches(anyString(), anyString());
         verify(jwtTokenProvider).createAccessToken(anyLong(), anyString());
         verify(jwtTokenProvider).createRefreshToken(anyLong());
+        verify(refreshTokenRepository).save(eq(1L), eq("refreshToken"), any(Duration.class));
     }
 
     @Test
@@ -155,13 +161,13 @@ class AuthServiceTest {
         }
 
         given(jwtTokenProvider.validateToken("validRefreshToken")).willReturn(true);
+        given(jwtTokenProvider.getTokenType("validRefreshToken")).willReturn("refresh");
         given(jwtTokenProvider.getUserId("validRefreshToken")).willReturn(1L);
+        given(refreshTokenRepository.validate(1L, "validRefreshToken")).willReturn(true);
         given(userRepository.findById(1L)).willReturn(Optional.of(testUser));
         given(jwtTokenProvider.createAccessToken(1L, "test@test.com")).willReturn("newAccessToken");
         given(jwtTokenProvider.createRefreshToken(1L)).willReturn("newRefreshToken");
-
-        // Redis 모킹 추가
-        given(stringRedisTemplate.opsForValue()).willReturn(valueOperations);
+        given(jwtTokenProvider.getRefreshTokenTtl()).willReturn(Duration.ofMillis(604800000L));
 
         // When
         LoginResponse result = authService.refresh(refreshRequest);
@@ -174,10 +180,12 @@ class AuthServiceTest {
         assertThat(result.getUser().getId()).isEqualTo(1L);
 
         verify(jwtTokenProvider).validateToken("validRefreshToken");
+        verify(jwtTokenProvider).getTokenType("validRefreshToken");
         verify(jwtTokenProvider).getUserId("validRefreshToken");
+        verify(refreshTokenRepository).validate(1L, "validRefreshToken");
         verify(userRepository).findById(1L);
         verify(jwtTokenProvider).createRefreshToken(1L);
-        verify(valueOperations).set(anyString(), anyString(), anyLong(), eq(TimeUnit.MILLISECONDS));
+        verify(refreshTokenRepository).save(eq(1L), eq("newRefreshToken"), any(Duration.class));
     }
 
     @Test
@@ -209,7 +217,7 @@ class AuthServiceTest {
         // Given
         String accessToken = "validAccessToken";
         Long userId = 1L;
-        Long expiration = 900000L; // 15분
+        Long expiration = 900000L;
 
         given(jwtTokenProvider.getUserId(accessToken)).willReturn(userId);
         given(jwtTokenProvider.getExpiration(accessToken)).willReturn(expiration);
@@ -227,6 +235,7 @@ class AuthServiceTest {
                 eq(expiration),
                 eq(TimeUnit.MILLISECONDS)
         );
+        verify(refreshTokenRepository).delete(userId);
     }
 
 }

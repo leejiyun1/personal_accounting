@@ -1,7 +1,5 @@
-package com.personalaccount.auth.jwt;
+package com.personalaccount.infrastructure.security.jwt;
 
-import com.personalaccount.infrastructure.security.jwt.JwtAuthenticationFilter;
-import com.personalaccount.infrastructure.security.jwt.JwtTokenProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -60,6 +58,7 @@ class JwtAuthenticationFilterTest {
         given(request.getHeader("Authorization")).willReturn("Bearer " + validToken);
         given(jwtTokenProvider.validateToken(validToken)).willReturn(true);
         given(stringRedisTemplate.hasKey("blacklist:" + validToken)).willReturn(false);
+        given(jwtTokenProvider.getTokenType(validToken)).willReturn("access");
         given(jwtTokenProvider.getUserId(validToken)).willReturn(userId);
 
         jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
@@ -70,6 +69,7 @@ class JwtAuthenticationFilterTest {
         assertThat(authentication.getAuthorities()).isEmpty();
 
         verify(jwtTokenProvider).validateToken(validToken);
+        verify(jwtTokenProvider).getTokenType(validToken);
         verify(jwtTokenProvider).getUserId(validToken);
         verify(stringRedisTemplate).hasKey("blacklist:" + validToken);
         verify(filterChain).doFilter(request, response);
@@ -83,7 +83,6 @@ class JwtAuthenticationFilterTest {
         given(request.getHeader("Authorization")).willReturn("Bearer " + blacklistedToken);
         given(jwtTokenProvider.validateToken(blacklistedToken)).willReturn(true);
         given(stringRedisTemplate.hasKey("blacklist:" + blacklistedToken)).willReturn(true);
-        given(request.getRequestURI()).willReturn("/api/test");
 
         jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
 
@@ -166,7 +165,8 @@ class JwtAuthenticationFilterTest {
 
         given(request.getHeader("Authorization")).willReturn("Bearer " + validToken);
         given(jwtTokenProvider.validateToken(validToken)).willReturn(true);
-        given(stringRedisTemplate.hasKey(anyString())).willReturn(false);
+        given(stringRedisTemplate.hasKey("blacklist:" + validToken)).willReturn(false);
+        given(jwtTokenProvider.getTokenType(validToken)).willReturn("access");
         given(jwtTokenProvider.getUserId(validToken)).willThrow(new RuntimeException("Parsing error"));
 
         jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
@@ -183,7 +183,8 @@ class JwtAuthenticationFilterTest {
         String token = "my.jwt.token";
         given(request.getHeader("Authorization")).willReturn("Bearer " + token);
         given(jwtTokenProvider.validateToken(token)).willReturn(true);
-        given(stringRedisTemplate.hasKey(anyString())).willReturn(false);
+        given(stringRedisTemplate.hasKey("blacklist:" + token)).willReturn(false);
+        given(jwtTokenProvider.getTokenType(token)).willReturn("access");
         given(jwtTokenProvider.getUserId(token)).willReturn(1L);
 
         jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
@@ -198,6 +199,7 @@ class JwtAuthenticationFilterTest {
         given(request.getHeader("Authorization")).willReturn("Bearer " + token);
         given(jwtTokenProvider.validateToken(token)).willReturn(true);
         given(stringRedisTemplate.hasKey("blacklist:" + token)).willReturn(null);
+        given(jwtTokenProvider.getTokenType(token)).willReturn("access");
         given(jwtTokenProvider.getUserId(token)).willReturn(1L);
 
         jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
@@ -205,5 +207,24 @@ class JwtAuthenticationFilterTest {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         assertThat(authentication).isNotNull();
         assertThat(authentication.getPrincipal()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("Refresh_토큰으로_접근_시도_인증_실패")
+    void doFilterInternal_RefreshToken_DoesNotSetAuthentication() throws ServletException, IOException {
+        String refreshToken = "refresh.jwt.token";
+
+        given(request.getHeader("Authorization")).willReturn("Bearer " + refreshToken);
+        given(jwtTokenProvider.validateToken(refreshToken)).willReturn(true);
+        given(stringRedisTemplate.hasKey("blacklist:" + refreshToken)).willReturn(false);
+        given(jwtTokenProvider.getTokenType(refreshToken)).willReturn("refresh");
+
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        assertThat(authentication).isNull();
+
+        verify(jwtTokenProvider, never()).getUserId(anyString());
+        verify(filterChain).doFilter(request, response);
     }
 }

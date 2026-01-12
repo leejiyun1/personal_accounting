@@ -1,4 +1,4 @@
-package com.personalaccount.application.report.repository;
+package com.personalaccount.infrastructure.persistence.report;
 
 import com.personalaccount.domain.account.entity.Account;
 import com.personalaccount.domain.account.entity.AccountType;
@@ -12,7 +12,6 @@ import com.personalaccount.domain.transaction.repository.TransactionDetailReposi
 import com.personalaccount.domain.transaction.repository.TransactionRepository;
 import com.personalaccount.domain.user.entity.User;
 import com.personalaccount.domain.user.repository.UserRepository;
-import com.personalaccount.infrastructure.persistence.report.ReportQueryRepository;
 import com.querydsl.core.Tuple;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

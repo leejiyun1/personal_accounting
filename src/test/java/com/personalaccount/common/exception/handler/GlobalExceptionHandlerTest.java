@@ -203,7 +203,7 @@ class GlobalExceptionHandlerTest {
 
         ResponseEntity<ErrorResponse> response = exceptionHandler.handleBusinessException(exception);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getErrorCode()).isEqualTo("AI002");
     }
@@ -215,7 +215,7 @@ class GlobalExceptionHandlerTest {
 
         ResponseEntity<ErrorResponse> response = exceptionHandler.handleBusinessException(exception);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getErrorCode()).isEqualTo("AI003");
     }

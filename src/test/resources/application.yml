@@ -19,10 +19,13 @@ spring:
       host: localhost
       port: 6379
 
-# Gemini 설정 (운영과 동일)
+# Gemini 설정
 gemini:
   api-key: ${GEMINI_API_KEY:test-key}
   api-url: https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent
+  cache-url: https://generativelanguage.googleapis.com/v1beta/cachedContents
+  timeout: 30000
+  max-retry: 3
 
 # JWT 설정
 jwt:

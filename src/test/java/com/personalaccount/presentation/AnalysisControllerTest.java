@@ -1,7 +1,6 @@
-package com.personalaccount.application.report.controller;
+package com.personalaccount.presentation;
 
 import com.personalaccount.application.report.service.ReportService;
-import com.personalaccount.presentation.AnalysisController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

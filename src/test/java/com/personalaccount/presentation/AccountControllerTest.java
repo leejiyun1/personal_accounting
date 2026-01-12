@@ -1,4 +1,4 @@
-package com.personalaccount.domain.account.controller;
+package com.personalaccount.presentation;
 
 import com.personalaccount.domain.account.dto.mapper.AccountMapper;
 import com.personalaccount.domain.account.dto.response.AccountResponse;
@@ -7,7 +7,6 @@ import com.personalaccount.domain.account.entity.Account;
 import com.personalaccount.domain.account.entity.AccountType;
 import com.personalaccount.domain.account.service.AccountService;
 import com.personalaccount.domain.book.entity.BookType;
-import com.personalaccount.presentation.AccountController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
