@@ -1,4 +1,3 @@
-// src/main/java/com/personalaccount/common/exception/handler/GlobalExceptionHandler.java
 package com.personalaccount.common.exception.handler;
 
 import com.personalaccount.common.dto.ErrorResponse;
@@ -24,8 +23,6 @@ public class GlobalExceptionHandler {
 
     private final Environment environment;
 
-    // === Validation 예외 ===
-
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationException(
             MethodArgumentNotValidException ex
@@ -50,12 +47,8 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
-    // === Business 예외 (통합 처리) ===
-
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ErrorResponse> handleBusinessException(
-            BusinessException ex
-    ) {
+    public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException ex) {
         ErrorCode errorCode = ex.getErrorCode();
 
         log.warn("BusinessException: code={}, message={}",
@@ -67,55 +60,15 @@ public class GlobalExceptionHandler {
                 .message(ex.getMessage())
                 .build();
 
-        HttpStatus status = determineHttpStatus(errorCode);
-
         return ResponseEntity
-                .status(status)
+                .status(errorCode.getHttpStatus())
                 .body(response);
     }
 
-    /**
-     * ErrorCode에 따라 HTTP 상태 코드 결정
-     */
-    private HttpStatus determineHttpStatus(ErrorCode errorCode) {
-        String code = errorCode.getCode();
-
-        // UNAUTHORIZED (401)
-        if (code.startsWith("AUTH")) {
-            if (code.equals("AUTH002")) {
-                return HttpStatus.TOO_MANY_REQUESTS;  // Rate Limit
-            }
-            return HttpStatus.UNAUTHORIZED;
-        }
-
-        // SERVICE_UNAVAILABLE (503)
-        if (code.startsWith("AI")) {
-            return HttpStatus.SERVICE_UNAVAILABLE;
-        }
-
-        // FORBIDDEN (403)
-        if (code.equals("B003")) {  // UNAUTHORIZED_BOOK_ACCESS
-            return HttpStatus.FORBIDDEN;
-        }
-
-        // NOT_FOUND (404)
-        if (code.endsWith("001")) {
-            return HttpStatus.NOT_FOUND;
-        }
-
-        // BAD_REQUEST (400) - 기본
-        return HttpStatus.BAD_REQUEST;
-    }
-
-    // === 모든 예외 (환경별 분기) ===
-
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleException(
-            Exception ex
-    ) {
+    public ResponseEntity<ErrorResponse> handleException(Exception ex) {
         log.error("Unexpected error: ", ex);
 
-        // 운영 환경에서는 상세 에러 숨김
         String message = isProdEnvironment()
                 ? "서버 오류가 발생했습니다."
                 : "서버 오류: " + ex.getMessage();
