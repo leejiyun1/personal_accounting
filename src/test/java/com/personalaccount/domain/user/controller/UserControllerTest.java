@@ -7,6 +7,7 @@ import com.personalaccount.domain.user.dto.request.UserUpdateRequest;
 import com.personalaccount.domain.user.dto.response.UserResponse;
 import com.personalaccount.domain.user.entity.User;
 import com.personalaccount.domain.user.service.UserService;
+import com.personalaccount.presentation.UserController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -1,6 +1,6 @@
 package com.personalaccount.config;
 
-import com.personalaccount.auth.jwt.JwtAuthenticationFilter;
+import com.personalaccount.infrastructure.security.jwt.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

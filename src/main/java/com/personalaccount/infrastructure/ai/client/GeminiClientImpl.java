@@ -1,14 +1,18 @@
 package com.personalaccount.infrastructure.ai.client;
 
-import com.personalaccount.application.ai.chat.dto.request.CachedContentRequest;
-import com.personalaccount.application.ai.chat.dto.request.GeminiRequest;
-import com.personalaccount.application.ai.chat.dto.response.CachedContentResponse;
-import com.personalaccount.application.ai.chat.dto.response.GeminiResponse;
 import com.personalaccount.common.exception.custom.AiBadRequestException;
 import com.personalaccount.common.exception.custom.AiRateLimitException;
 import com.personalaccount.common.exception.custom.AiServiceException;
 import com.personalaccount.common.exception.custom.AiTimeoutException;
 import com.personalaccount.domain.ai.client.AiClient;
+import com.personalaccount.domain.ai.dto.AiMessageRequest;
+import com.personalaccount.domain.ai.dto.AiMessageResponse;
+import com.personalaccount.domain.ai.dto.CacheCreateRequest;
+import com.personalaccount.domain.ai.dto.CacheCreateResponse;
+import com.personalaccount.infrastructure.ai.dto.request.CachedContentRequest;
+import com.personalaccount.infrastructure.ai.dto.response.CachedContentResponse;
+import com.personalaccount.infrastructure.ai.dto.request.GeminiRequest;
+import com.personalaccount.infrastructure.ai.dto.response.GeminiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
@@ -19,6 +23,7 @@ import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 @Slf4j
@@ -47,25 +52,30 @@ public class GeminiClientImpl implements AiClient {
     }
 
     @Override
-    public Mono<GeminiResponse> sendMessage(GeminiRequest request) {
+    public Mono<AiMessageResponse> sendMessage(AiMessageRequest request) {
+        GeminiRequest geminiRequest = toGeminiRequest(request);
+
         return webClient.post()
                 .uri(uriBuilder -> uriBuilder
                         .queryParam("key", apiKey)
                         .build())
                 .header("Content-Type", "application/json")
-                .bodyValue(request)
+                .bodyValue(geminiRequest)
                 .retrieve()
                 .bodyToMono(GeminiResponse.class)
                 .timeout(Duration.ofMillis(timeout))
                 .retryWhen(createRetrySpec())
-                .doOnSuccess(this::logTokenUsage)
+                .map(this::toAiMessageResponse)
+                .doOnSuccess(response -> logTokenUsage(response))
                 .doOnError(error -> log.error("Gemini API 호출 실패: {}", error.getMessage()))
                 .onErrorMap(this::mapToBusinessException);
     }
 
     @Override
-    public Mono<CachedContentResponse> createCachedContent(CachedContentRequest request) {
+    public Mono<CacheCreateResponse> createCachedContent(CacheCreateRequest request) {
         log.info("캐시 생성 시작");
+
+        CachedContentRequest cachedContentRequest = toCachedContentRequest(request);
 
         return WebClient.create(cacheUrl)
                 .post()
@@ -73,14 +83,69 @@ public class GeminiClientImpl implements AiClient {
                         .queryParam("key", apiKey)
                         .build())
                 .header("Content-Type", "application/json")
-                .bodyValue(request)
+                .bodyValue(cachedContentRequest)
                 .retrieve()
                 .bodyToMono(CachedContentResponse.class)
                 .timeout(Duration.ofMillis(timeout))
-                .doOnSuccess(response -> log.info("캐시 생성 완료: {}", response.getName()))
+                .map(this::toCacheCreateResponse)
+                .doOnSuccess(response -> log.info("캐시 생성 완료: {}", response.getCacheName()))
                 .doOnError(this::logCacheError)
                 .onErrorMap(this::mapToBusinessException);
     }
+
+    // === Domain DTO <-> Infrastructure DTO 변환 ===
+
+    private GeminiRequest toGeminiRequest(AiMessageRequest request) {
+        return GeminiRequest.builder()
+                .cachedContent(request.getCachedContentName())
+                .contents(List.of(GeminiRequest.Content.builder()
+                        .parts(List.of(GeminiRequest.Part.builder()
+                                .text(request.getConversationText())
+                                .build()))
+                        .build()))
+                .build();
+    }
+
+    private AiMessageResponse toAiMessageResponse(GeminiResponse response) {
+        String message = response.getCandidates().getFirst()
+                .getContent()
+                .getParts().getFirst()
+                .getText();
+
+        AiMessageResponse.AiMessageResponseBuilder builder = AiMessageResponse.builder()
+                .message(message);
+
+        if (response.getUsageMetadata() != null) {
+            var usage = response.getUsageMetadata();
+            builder.promptTokenCount(usage.getPromptTokenCount())
+                    .candidatesTokenCount(usage.getCandidatesTokenCount())
+                    .totalTokenCount(usage.getTotalTokenCount())
+                    .cachedContentTokenCount(usage.getCachedContentTokenCount());
+        }
+
+        return builder.build();
+    }
+
+    private CachedContentRequest toCachedContentRequest(CacheCreateRequest request) {
+        return CachedContentRequest.builder()
+                .model(request.getModel())
+                .systemInstruction(CachedContentRequest.SystemInstruction.builder()
+                        .parts(List.of(CachedContentRequest.Part.builder()
+                                .text(request.getSystemPrompt())
+                                .build()))
+                        .build())
+                .ttl(request.getTtl())
+                .build();
+    }
+
+    private CacheCreateResponse toCacheCreateResponse(CachedContentResponse response) {
+        return CacheCreateResponse.builder()
+                .cacheName(response.getName())
+                .expireTime(response.getExpireTime())
+                .build();
+    }
+
+    // === Retry & Error Handling ===
 
     private Retry createRetrySpec() {
         return Retry.backoff(maxRetry, Duration.ofSeconds(1))
@@ -154,14 +219,13 @@ public class GeminiClientImpl implements AiClient {
         return defaultMessage;
     }
 
-    private void logTokenUsage(GeminiResponse response) {
-        if (response != null && response.getUsageMetadata() != null) {
-            var usage = response.getUsageMetadata();
+    private void logTokenUsage(AiMessageResponse response) {
+        if (response != null && response.getTotalTokenCount() != null) {
             log.info("토큰 사용량 - total: {}, prompt: {}, candidates: {}, cached: {}",
-                    usage.getTotalTokenCount(),
-                    usage.getPromptTokenCount(),
-                    usage.getCandidatesTokenCount(),
-                    usage.getCachedContentTokenCount());
+                    response.getTotalTokenCount(),
+                    response.getPromptTokenCount(),
+                    response.getCandidatesTokenCount(),
+                    response.getCachedContentTokenCount());
         }
     }
 

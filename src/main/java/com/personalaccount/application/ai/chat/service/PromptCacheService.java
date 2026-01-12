@@ -1,13 +1,13 @@
 package com.personalaccount.application.ai.chat.service;
 
-import com.personalaccount.application.ai.chat.dto.request.CachedContentRequest;
-import com.personalaccount.application.ai.chat.dto.response.CachedContentResponse;
 import com.personalaccount.application.ai.util.PromptTemplate;
 import com.personalaccount.common.exception.custom.AiServiceException;
 import com.personalaccount.domain.account.entity.Account;
 import com.personalaccount.domain.account.entity.AccountType;
 import com.personalaccount.domain.account.repository.AccountRepository;
 import com.personalaccount.domain.ai.client.AiClient;
+import com.personalaccount.domain.ai.dto.CacheCreateRequest;
+import com.personalaccount.domain.ai.dto.CacheCreateResponse;
 import com.personalaccount.domain.book.entity.BookType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,25 +58,19 @@ public class PromptCacheService {
 
         String systemPrompt = buildSystemPrompt(bookType);
 
-        // 트랜잭션 종료 후 API 호출하도록 분리하는 게 더 좋지만,
-        // 읽기 전용이고 짧은 조회이므로 허용
-        CachedContentRequest request = CachedContentRequest.builder()
+        CacheCreateRequest request = CacheCreateRequest.builder()
                 .model("models/gemini-2.5-flash")
-                .systemInstruction(CachedContentRequest.SystemInstruction.builder()
-                        .parts(List.of(CachedContentRequest.Part.builder()
-                                .text(systemPrompt)
-                                .build()))
-                        .build())
+                .systemPrompt(systemPrompt)
                 .ttl("82800s")
                 .build();
 
-        CachedContentResponse response = aiClient.createCachedContent(request).block();
+        CacheCreateResponse response = aiClient.createCachedContent(request).block();
 
         if (response == null) {
             throw new AiServiceException("캐시 생성 실패");
         }
 
-        String cachedContentName = response.getName();
+        String cachedContentName = response.getCacheName();
         redisTemplate.opsForValue().set(cacheKey, cachedContentName, CACHE_TTL);
 
         log.info("캐시 생성 완료 - bookType: {}, name: {}", bookType, cachedContentName);

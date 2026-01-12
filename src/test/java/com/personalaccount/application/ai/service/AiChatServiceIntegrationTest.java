@@ -1,8 +1,8 @@
 package com.personalaccount.application.ai.service;
 
 import com.personalaccount.application.ai.chat.service.AiChatService;
-import com.personalaccount.application.ai.chat.dto.request.AiChatRequest;
-import com.personalaccount.application.ai.chat.dto.response.AiChatResponse;
+import com.personalaccount.application.ai.dto.request.AiChatRequest;
+import com.personalaccount.application.ai.dto.response.AiChatResponse;
 import com.personalaccount.domain.account.entity.Account;
 import com.personalaccount.domain.account.entity.AccountType;
 import com.personalaccount.domain.account.repository.AccountRepository;

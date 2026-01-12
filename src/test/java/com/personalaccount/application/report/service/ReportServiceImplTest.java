@@ -1,7 +1,7 @@
 package com.personalaccount.application.report.service;
 
 import com.personalaccount.application.report.dto.response.*;
-import com.personalaccount.application.report.repository.ReportQueryRepository;
+import com.personalaccount.infrastructure.persistence.report.ReportQueryRepository;
 import com.personalaccount.application.report.service.impl.ReportServiceImpl;
 import com.personalaccount.common.exception.custom.AccountNotFoundException;
 import com.personalaccount.common.exception.custom.BookNotFoundException;

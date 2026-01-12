@@ -9,6 +9,7 @@ import com.personalaccount.domain.book.entity.Book;
 import com.personalaccount.domain.book.entity.BookType;
 import com.personalaccount.domain.book.service.BookService;
 import com.personalaccount.domain.user.entity.User;
+import com.personalaccount.presentation.BookController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

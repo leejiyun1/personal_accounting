@@ -1,9 +1,7 @@
 package com.personalaccount.application.ai.chat.service.impl;
 
-import com.personalaccount.application.ai.chat.dto.request.AiChatRequest;
-import com.personalaccount.application.ai.chat.dto.request.GeminiRequest;
-import com.personalaccount.application.ai.chat.dto.response.AiChatResponse;
-import com.personalaccount.application.ai.chat.dto.response.GeminiResponse;
+import com.personalaccount.application.ai.dto.request.AiChatRequest;
+import com.personalaccount.application.ai.dto.response.AiChatResponse;
 import com.personalaccount.application.ai.chat.service.AiChatService;
 import com.personalaccount.application.ai.chat.service.PromptCacheService;
 import com.personalaccount.application.ai.chat.service.TransactionCreationService;
@@ -13,6 +11,8 @@ import com.personalaccount.common.exception.custom.BookNotFoundException;
 import com.personalaccount.common.exception.custom.SessionNotFoundException;
 import com.personalaccount.common.exception.custom.UnauthorizedBookAccessException;
 import com.personalaccount.domain.ai.client.AiClient;
+import com.personalaccount.domain.ai.dto.AiMessageRequest;
+import com.personalaccount.domain.ai.dto.AiMessageResponse;
 import com.personalaccount.domain.ai.repository.SessionRepository;
 import com.personalaccount.domain.book.entity.Book;
 import com.personalaccount.domain.book.entity.BookType;
@@ -21,8 +21,6 @@ import com.personalaccount.domain.transaction.dto.response.TransactionResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Slf4j
 @Service
@@ -51,12 +49,12 @@ public class AiChatServiceImpl implements AiChatService {
         );
         session.addMessage("user", request.getMessage());
 
-        // 3. Gemini 요청 생성
-        GeminiRequest geminiRequest = buildGeminiRequest(session, bookType);
+        // 3. AI 요청 생성
+        AiMessageRequest aiRequest = buildAiRequest(session, bookType);
 
         // 4. 외부 API 호출 (트랜잭션 밖)
-        GeminiResponse geminiResponse = callGeminiApi(geminiRequest);
-        String aiMessage = extractMessage(geminiResponse);
+        AiMessageResponse aiResponse = callAiApi(aiRequest);
+        String aiMessage = aiResponse.getMessage();
 
         session.addMessage("assistant", aiMessage);
 
@@ -100,20 +98,15 @@ public class AiChatServiceImpl implements AiChatService {
         return session;
     }
 
-    // === Gemini API ===
+    // === AI API ===
 
-    private GeminiRequest buildGeminiRequest(ConversationSession session, BookType bookType) {
+    private AiMessageRequest buildAiRequest(ConversationSession session, BookType bookType) {
         String cachedContentName = promptCacheService.getOrCreateCache(bookType);
+        String conversationText = buildConversationText(session);
 
-        String conversation = buildConversationText(session);
-
-        return GeminiRequest.builder()
-                .cachedContent(cachedContentName)
-                .contents(List.of(GeminiRequest.Content.builder()
-                        .parts(List.of(GeminiRequest.Part.builder()
-                                .text(conversation)
-                                .build()))
-                        .build()))
+        return AiMessageRequest.builder()
+                .cachedContentName(cachedContentName)
+                .conversationText(conversationText)
                 .build();
     }
 
@@ -128,21 +121,14 @@ public class AiChatServiceImpl implements AiChatService {
         return sb.toString();
     }
 
-    private GeminiResponse callGeminiApi(GeminiRequest request) {
-        GeminiResponse response = aiClient.sendMessage(request).block();
+    private AiMessageResponse callAiApi(AiMessageRequest request) {
+        AiMessageResponse response = aiClient.sendMessage(request).block();
 
         if (response == null) {
             throw new AiServiceException("AI 응답이 비어있습니다");
         }
 
         return response;
-    }
-
-    private String extractMessage(GeminiResponse response) {
-        return response.getCandidates().getFirst()
-                .getContent()
-                .getParts().getFirst()
-                .getText();
     }
 
     // === 응답 처리 ===

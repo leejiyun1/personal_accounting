@@ -1,10 +1,10 @@
 package com.personalaccount.auth.service;
 
-import com.personalaccount.auth.dto.request.LoginRequest;
-import com.personalaccount.auth.dto.request.RefreshRequest;
-import com.personalaccount.auth.dto.response.LoginResponse;
-import com.personalaccount.auth.jwt.JwtTokenProvider;
-import com.personalaccount.auth.service.impl.AuthServiceImpl;
+import com.personalaccount.application.auth.dto.request.LoginRequest;
+import com.personalaccount.application.auth.dto.request.RefreshRequest;
+import com.personalaccount.application.auth.dto.response.LoginResponse;
+import com.personalaccount.infrastructure.security.jwt.JwtTokenProvider;
+import com.personalaccount.application.auth.service.impl.AuthServiceImpl;
 import com.personalaccount.common.exception.custom.UnauthorizedException;
 import com.personalaccount.common.ratelimit.RateLimitService;
 import com.personalaccount.domain.user.entity.User;

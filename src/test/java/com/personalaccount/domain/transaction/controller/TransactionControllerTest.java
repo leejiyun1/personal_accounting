@@ -7,6 +7,7 @@ import com.personalaccount.domain.transaction.dto.request.TransactionUpdateReque
 import com.personalaccount.domain.transaction.dto.response.TransactionResponse;
 import com.personalaccount.domain.transaction.entity.TransactionType;
 import com.personalaccount.domain.transaction.service.TransactionService;
+import com.personalaccount.presentation.TransactionController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

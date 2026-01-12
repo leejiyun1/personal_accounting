@@ -4,6 +4,7 @@ import com.personalaccount.application.report.dto.response.AccountBalance;
 import com.personalaccount.application.report.dto.response.CategorySummary;
 import com.personalaccount.application.report.dto.response.MonthlySummary;
 import com.personalaccount.application.report.service.ReportService;
+import com.personalaccount.presentation.StatisticsController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
