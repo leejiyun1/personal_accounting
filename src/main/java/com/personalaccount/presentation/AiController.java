@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 @RestController
@@ -49,6 +50,9 @@ public class AiController {
                     - 날짜 (생략 시 오늘)
                     
                     정보가 부족하면 AI가 추가 질문을 합니다.
+                    
+                    **논블로킹 처리:**
+                    AI API 호출은 논블로킹으로 처리되어 서버 처리량이 향상됩니다.
                     """
     )
     @ApiResponses({
@@ -71,12 +75,13 @@ public class AiController {
             )
     })
     @PostMapping("/chat")
-    public ResponseEntity<CommonResponse<AiChatResponse>> chat(
+    public Mono<ResponseEntity<CommonResponse<AiChatResponse>>> chat(
             @Parameter(hidden = true) @AuthenticationPrincipal Long userId,
             @Valid @RequestBody AiChatRequest request
     ) {
         log.info("POST /api/v1/ai/chat - userId={}", userId);
-        AiChatResponse response = aiChatService.chat(userId, request);
-        return ResponseEntity.ok(ResponseFactory.success(response));
+        
+        return aiChatService.chat(userId, request)
+                .map(response -> ResponseEntity.ok(ResponseFactory.success(response)));
     }
 }

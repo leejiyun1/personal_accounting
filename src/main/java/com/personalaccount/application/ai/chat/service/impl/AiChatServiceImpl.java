@@ -21,6 +21,8 @@ import com.personalaccount.domain.transaction.dto.response.TransactionResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @Slf4j
 @Service
@@ -34,33 +36,63 @@ public class AiChatServiceImpl implements AiChatService {
     private final PromptCacheService promptCacheService;
 
     @Override
-    public AiChatResponse chat(Long userId, AiChatRequest request) {
+    public Mono<AiChatResponse> chat(Long userId, AiChatRequest request) {
         log.info("AI 대화 시작 - userId: {}, bookId: {}", userId, request.getBookId());
 
-        // 1. 검증 (트랜잭션 없음)
-        Book book = validateAndGetBook(userId, request.getBookId());
-        BookType bookType = book.getBookType();
+        // 1. DB 조회 (블로킹) - boundedElastic 스케줄러에서 실행
+        return Mono.fromCallable(() -> validateAndGetBook(userId, request.getBookId()))
+                .subscribeOn(Schedulers.boundedElastic())
 
-        // 2. 세션 처리 (Redis)
-        ConversationSession session = getOrCreateSession(
-                request.getConversationId(),
-                userId,
-                request.getBookId()
-        );
-        session.addMessage("user", request.getMessage());
+                // 2. 세션 처리 (Redis 블로킹) - 같은 boundedElastic에서 실행
+                .map(book -> {
+                    ConversationSession session = getOrCreateSession(
+                            request.getConversationId(),
+                            userId,
+                            request.getBookId()
+                    );
+                    session.addMessage("user", request.getMessage());
+                    return new ChatContext(book, session);
+                })
 
-        // 3. AI 요청 생성
-        AiMessageRequest aiRequest = buildAiRequest(session, bookType);
+                // 3. AI 요청 생성 및 호출 (논블로킹)
+                .flatMap(context -> {
+                    AiMessageRequest aiRequest = buildAiRequest(context.session(), context.book().getBookType());
+                    
+                    return aiClient.sendMessage(aiRequest)
+                            .map(aiResponse -> {
+                                if (aiResponse == null) {
+                                    throw new AiServiceException("AI 응답이 비어있습니다");
+                                }
+                                return new AiResponseContext(context, aiResponse.getMessage());
+                            });
+                })
 
-        // 4. 외부 API 호출 (트랜잭션 밖)
-        AiMessageResponse aiResponse = callAiApi(aiRequest);
-        String aiMessage = aiResponse.getMessage();
+                // 4. 응답 처리 (DB 저장은 블로킹) - boundedElastic에서 실행
+                .flatMap(responseContext -> 
+                    Mono.fromCallable(() -> processResponse(userId, responseContext))
+                            .subscribeOn(Schedulers.boundedElastic())
+                );
+    }
 
+    // === 내부 컨텍스트 클래스 ===
+
+    private record ChatContext(Book book, ConversationSession session) {}
+    
+    private record AiResponseContext(ChatContext chatContext, String aiMessage) {
+        Book book() { return chatContext.book(); }
+        ConversationSession session() { return chatContext.session(); }
+    }
+
+    // === 응답 처리 ===
+
+    private AiChatResponse processResponse(Long userId, AiResponseContext context) {
+        String aiMessage = context.aiMessage();
+        ConversationSession session = context.session();
+        
         session.addMessage("assistant", aiMessage);
 
-        // 5. 응답 처리
         if (isTransactionComplete(aiMessage)) {
-            return handleCompleteTransaction(userId, session, aiMessage, bookType);
+            return handleCompleteTransaction(userId, session, aiMessage, context.book().getBookType());
         }
 
         return handleMoreInfoNeeded(session, aiMessage);
@@ -119,16 +151,6 @@ public class AiChatServiceImpl implements AiChatService {
                     .append("\n");
         }
         return sb.toString();
-    }
-
-    private AiMessageResponse callAiApi(AiMessageRequest request) {
-        AiMessageResponse response = aiClient.sendMessage(request).block();
-
-        if (response == null) {
-            throw new AiServiceException("AI 응답이 비어있습니다");
-        }
-
-        return response;
     }
 
     // === 응답 처리 ===

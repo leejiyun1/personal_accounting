@@ -92,7 +92,8 @@ class AiChatServiceIntegrationTest {
                 .message("오늘 부수입으로 30만원 벌었어")
                 .build();
 
-        AiChatResponse response = aiChatService.chat(testUser.getId(), request);
+        // Mono를 block()으로 동기 처리 (테스트에서는 OK)
+        AiChatResponse response = aiChatService.chat(testUser.getId(), request).block();
 
         assertThat(response).isNotNull();
 
@@ -106,9 +107,10 @@ class AiChatServiceIntegrationTest {
                     .message("현금으로 받았어")
                     .build();
 
-            response = aiChatService.chat(testUser.getId(), followUpRequest);
+            response = aiChatService.chat(testUser.getId(), followUpRequest).block();
         }
 
+        assertThat(response).isNotNull();
         assertThat(response.getNeedsMoreInfo()).isFalse();
         assertThat(response.getTransaction()).isNotNull();
         assertThat(response.getTransaction().getType()).isEqualTo(TransactionType.INCOME);
@@ -123,7 +125,7 @@ class AiChatServiceIntegrationTest {
                 .message("돈 벌었어")
                 .build();
 
-        AiChatResponse response = aiChatService.chat(testUser.getId(), request);
+        AiChatResponse response = aiChatService.chat(testUser.getId(), request).block();
 
         assertThat(response).isNotNull();
         assertThat(response.getNeedsMoreInfo()).isTrue();
@@ -139,8 +141,9 @@ class AiChatServiceIntegrationTest {
                 .message("오늘 부수입으로 30만원을 현금으로 받았어")
                 .build();
 
-        AiChatResponse response = aiChatService.chat(testUser.getId(), request);
+        AiChatResponse response = aiChatService.chat(testUser.getId(), request).block();
 
+        assertThat(response).isNotNull();
         if (!response.getNeedsMoreInfo()) {
             assertThat(response.getTransaction()).isNotNull();
             assertThat(response.getTransaction().getAmount()).isEqualTo(new BigDecimal("300000"));
