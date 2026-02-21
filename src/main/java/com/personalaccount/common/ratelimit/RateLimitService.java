@@ -65,8 +65,8 @@ public class RateLimitService {
 
         } catch (Exception e) {
             log.error("Rate limit 처리 실패: key={}", key, e);
-            // Redis 장애 시 허용 (Fail-open)
-            return true;
+            // Redis 장애 시 차단 (Fail-closed)
+            return false;
         }
     }
 
