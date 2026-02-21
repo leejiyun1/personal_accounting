@@ -126,6 +126,15 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void logout(String accessToken) {
+        if (!jwtTokenProvider.validateToken(accessToken)) {
+            throw new UnauthorizedException("유효하지 않은 액세스 토큰입니다");
+        }
+
+        String tokenType = jwtTokenProvider.getTokenType(accessToken);
+        if (!"access".equals(tokenType)) {
+            throw new UnauthorizedException("액세스 토큰이 아닙니다");
+        }
+
         Long userId = jwtTokenProvider.getUserId(accessToken);
 
         // Access Token 블랙리스트 등록

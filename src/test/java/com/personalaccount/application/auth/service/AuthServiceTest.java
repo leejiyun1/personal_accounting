@@ -219,6 +219,8 @@ class AuthServiceTest {
         Long userId = 1L;
         Long expiration = 900000L;
 
+        given(jwtTokenProvider.validateToken(accessToken)).willReturn(true);
+        given(jwtTokenProvider.getTokenType(accessToken)).willReturn("access");
         given(jwtTokenProvider.getUserId(accessToken)).willReturn(userId);
         given(jwtTokenProvider.getExpiration(accessToken)).willReturn(expiration);
         given(stringRedisTemplate.opsForValue()).willReturn(valueOperations);
@@ -236,6 +238,38 @@ class AuthServiceTest {
                 eq(TimeUnit.MILLISECONDS)
         );
         verify(refreshTokenRepository).delete(userId);
+    }
+
+    @Test
+    @DisplayName("로그아웃_유효하지않은토큰_예외발생")
+    void logout_InvalidToken_ThrowsException() {
+        // Given
+        String invalidToken = "invalidAccessToken";
+        given(jwtTokenProvider.validateToken(invalidToken)).willReturn(false);
+
+        // When & Then
+        assertThatThrownBy(() -> authService.logout(invalidToken))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("유효하지 않은 액세스 토큰입니다");
+
+        verify(jwtTokenProvider).validateToken(invalidToken);
+    }
+
+    @Test
+    @DisplayName("로그아웃_refresh토큰_예외발생")
+    void logout_RefreshToken_ThrowsException() {
+        // Given
+        String refreshToken = "refreshToken";
+        given(jwtTokenProvider.validateToken(refreshToken)).willReturn(true);
+        given(jwtTokenProvider.getTokenType(refreshToken)).willReturn("refresh");
+
+        // When & Then
+        assertThatThrownBy(() -> authService.logout(refreshToken))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("액세스 토큰이 아닙니다");
+
+        verify(jwtTokenProvider).validateToken(refreshToken);
+        verify(jwtTokenProvider).getTokenType(refreshToken);
     }
 
 }

@@ -6,6 +6,7 @@ import com.personalaccount.application.auth.dto.response.LoginResponse;
 import com.personalaccount.application.auth.service.AuthService;
 import com.personalaccount.common.dto.CommonResponse;
 import com.personalaccount.common.dto.ResponseFactory;
+import com.personalaccount.common.exception.custom.UnauthorizedException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -16,6 +17,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -104,8 +106,15 @@ public class AuthController {
             @RequestHeader("Authorization") String authorization
     ) {
         log.info("POST /api/v1/auth/logout");
-        String accessToken = authorization.replace("Bearer ", "");
+        String accessToken = extractBearerToken(authorization);
         authService.logout(accessToken);
         return ResponseEntity.ok(ResponseFactory.successWithMessage("로그아웃 성공"));
+    }
+
+    private String extractBearerToken(String authorization) {
+        if (!StringUtils.hasText(authorization) || !authorization.startsWith("Bearer ")) {
+            throw new UnauthorizedException("Bearer 토큰 형식이 아닙니다");
+        }
+        return authorization.substring(7);
     }
 }
