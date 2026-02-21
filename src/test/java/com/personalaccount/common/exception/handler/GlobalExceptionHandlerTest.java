@@ -16,7 +16,6 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -44,21 +43,18 @@ class GlobalExceptionHandlerTest {
         MethodArgumentNotValidException exception = mock(MethodArgumentNotValidException.class);
         given(exception.getBindingResult()).willReturn(bindingResult);
 
-        ResponseEntity<Map<String, Object>> response = exceptionHandler.handleValidationException(exception);
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleValidationException(exception);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
 
-        Map<String, Object> body = response.getBody();
+        ErrorResponse body = response.getBody();
         assertThat(body).isNotNull();
-        assertThat(body.get("success")).isEqualTo(false);
-        assertThat(body.get("errorCode")).isEqualTo("VALIDATION_ERROR");
-        assertThat(body.get("message")).isEqualTo("입력값 검증 실패");
-
-        @SuppressWarnings("unchecked")
-        Map<String, String> errors = (Map<String, String>) body.get("errors");
-        assertThat(errors).hasSize(2);
-        assertThat(errors.get("email")).isEqualTo("이메일 형식이 올바르지 않습니다");
-        assertThat(errors.get("password")).isEqualTo("비밀번호는 8자 이상이어야 합니다");
+        assertThat(body.getSuccess()).isEqualTo(false);
+        assertThat(body.getErrorCode()).isEqualTo("VALIDATION_ERROR");
+        assertThat(body.getMessage()).isEqualTo("입력값 검증 실패");
+        assertThat(body.getDetails()).hasSize(2);
+        assertThat(body.getDetails().get("email")).isEqualTo("이메일 형식이 올바르지 않습니다");
+        assertThat(body.getDetails().get("password")).isEqualTo("비밀번호는 8자 이상이어야 합니다");
     }
 
     @Test

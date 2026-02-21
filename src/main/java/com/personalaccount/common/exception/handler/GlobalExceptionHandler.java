@@ -9,6 +9,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -24,23 +25,29 @@ public class GlobalExceptionHandler {
     private final Environment environment;
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidationException(
+    public ResponseEntity<ErrorResponse> handleValidationException(
             MethodArgumentNotValidException ex
     ) {
         log.warn("Validation failed: {}", ex.getMessage());
 
-        Map<String, String> errors = new HashMap<>();
+        Map<String, String> details = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach(error -> {
-            String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
+            if (error instanceof FieldError fieldError) {
+                details.put(fieldError.getField(), errorMessage);
+                return;
+            }
+            if (error instanceof ObjectError objectError) {
+                details.put(objectError.getObjectName(), errorMessage);
+            }
         });
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", false);
-        response.put("errorCode", "VALIDATION_ERROR");
-        response.put("message", "입력값 검증 실패");
-        response.put("errors", errors);
+        ErrorResponse response = ErrorResponse.builder()
+                .success(false)
+                .errorCode("VALIDATION_ERROR")
+                .message("입력값 검증 실패")
+                .details(details)
+                .build();
 
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
