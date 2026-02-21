@@ -1,15 +1,18 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/personal_accounting
-    username: jiyun
-    password: jiyun016
-    driver-class-name: org.postgresql.Driver
+    url: jdbc:h2:mem:personal_accounting_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
 
   jpa:
     hibernate:
       ddl-auto: create-drop
     defer-datasource-initialization: false
     show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
 
   flyway:
     enabled: false
